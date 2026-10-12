@@ -12,8 +12,16 @@
     ZoomOutOutline,
     PlusOutline,
     EyeOutline,
-    EyeSlashOutline
+    EyeSlashOutline,
+    RefreshOutline
   } from 'flowbite-svelte-icons';
+  import {
+    ankiSync,
+    refreshAnkiSync,
+    syncAnkiNow,
+    describeAnkiSync
+  } from '$lib/familiarity/anki-sync';
+  import { showSnackbar } from '$lib/util/snackbar';
   import LayerPicker from './Layers/LayerPicker.svelte';
   import type { LayerSummary } from '$lib/reader/edit/layer-list';
   import type { LayerAction } from './Layers/layer-actions';
@@ -124,6 +132,13 @@
 
   function toggleMenu() {
     open = !open;
+    if (open && $settings.ankiConnectSettings.enabled) void refreshAnkiSync();
+  }
+
+  async function handleAnkiSync() {
+    showSnackbar('Syncing Anki with AnkiWeb…', 2000);
+    const err = await syncAnkiNow();
+    showSnackbar(err ? `AnkiWeb sync failed: ${err}` : 'Anki synced with AnkiWeb', 4000);
   }
 </script>
 
@@ -183,6 +198,32 @@
               class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white"
               >2</span
             >
+          </button>
+        {/if}
+        {#if $settings.ankiConnectSettings.enabled}
+          <!-- manga-immersion fork: force the server-side Anki to sync with AnkiWeb now -->
+          <button
+            onclick={handleAnkiSync}
+            disabled={$ankiSync.syncing}
+            class="relative flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-gray-300 shadow-lg hover:bg-gray-600 focus:outline-none disabled:opacity-70 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            aria-label="Sync Anki with AnkiWeb now"
+            title={describeAnkiSync($ankiSync.status)}
+          >
+            <RefreshOutline
+              size="xl"
+              class={$ankiSync.syncing || $ankiSync.status?.running ? 'animate-spin' : ''}
+            />
+            {#if ($ankiSync.status?.unsyncedNotes ?? 0) > 0}
+              <span
+                class="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-xs text-white"
+                >{$ankiSync.status?.unsyncedNotes}</span
+              >
+            {:else if $ankiSync.status?.lastSync && !$ankiSync.status.lastSync.ok}
+              <span
+                class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                >!</span
+              >
+            {/if}
           </button>
         {/if}
         <!-- manga-immersion fork: touch-friendly "always show OCR" toggle (keyboard: T) -->

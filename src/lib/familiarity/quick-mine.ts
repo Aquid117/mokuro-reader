@@ -4,6 +4,7 @@ import { ankiConnect } from '$lib/anki-connect';
 import { showSnackbar } from '$lib/util';
 import { cropForCard, type CropMode, type Rect } from './panel-crop';
 import { onNoteAdded, setMiningWord, readingToKana } from './mining-context';
+import { ankiSync, refreshAnkiSync } from './anki-sync';
 import type { ParsedToken, VocabEntry } from './types';
 
 /**
@@ -135,7 +136,13 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
     }
     const result = await ankiConnect('addNote', { note }, { silent: true });
     if (typeof result === 'number') {
-      showSnackbar(`Added ${fields.Word} to ${mining.deck}`);
+      // status may not be loaded yet on the first card; the server default is 2 min
+      const auto = get(ankiSync).status?.autoSync ?? { enabled: true, afterMiningSec: 120 };
+      const when = auto.enabled
+        ? ` · AnkiWeb sync in ~${Math.max(1, Math.round(auto.afterMiningSec / 60))} min`
+        : '';
+      showSnackbar(`Added ${fields.Word} to ${mining.deck}${when}`, 4000);
+      void refreshAnkiSync();
       void onNoteAdded(input.surface, result);
       return true;
     }

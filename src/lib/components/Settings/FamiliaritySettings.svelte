@@ -8,6 +8,29 @@
     highlightsSupported
   } from '$lib/familiarity';
   import { showSnackbar } from '$lib/util/snackbar';
+  import {
+    ankiSync,
+    refreshAnkiSync,
+    syncAnkiNow,
+    describeAnkiSync
+  } from '$lib/familiarity/anki-sync';
+  import { onMount } from 'svelte';
+
+  let now = $state(Date.now());
+  onMount(() => {
+    void refreshAnkiSync();
+    const t = setInterval(() => {
+      now = Date.now();
+      void refreshAnkiSync();
+    }, 30_000);
+    return () => clearInterval(t);
+  });
+
+  async function syncNow() {
+    const err = await syncAnkiNow();
+    now = Date.now();
+    showSnackbar(err ? `AnkiWeb sync failed: ${err}` : 'Anki synced with AnkiWeb', 4000);
+  }
 
   let fam = $derived($settings.familiarity ?? defaultFamiliaritySettings);
   let supported = $derived(typeof window !== 'undefined' && highlightsSupported());
@@ -173,6 +196,22 @@
           <option value="page">Full page</option>
         </select>
       </label>
+      <div class="flex items-center justify-between gap-2 text-sm">
+        <span>
+          AnkiWeb: {describeAnkiSync($ankiSync.status, now)}
+        </span>
+        <Button size="xs" color="alternative" disabled={$ankiSync.syncing} onclick={syncNow}>
+          {$ankiSync.syncing ? 'Syncing…' : 'Sync now'}
+        </Button>
+      </div>
+      <Helper>
+        New cards are synced automatically about {Math.max(
+          1,
+          Math.round(($ankiSync.status?.autoSync?.afterMiningSec ?? 120) / 60)
+        )} min after the last added card, and every {Math.round(
+          ($ankiSync.status?.autoSync?.intervalMin ?? 360) / 60
+        )} h. Then sync AnkiMobile/Anki on your devices to see them.
+      </Helper>
     </div>
 
     <div class="grid grid-cols-2 gap-2">
