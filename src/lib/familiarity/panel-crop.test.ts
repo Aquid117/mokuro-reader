@@ -53,6 +53,6 @@ describe('panel detection', () => {
     const g: Gray = { data: new Uint8Array(600 * 900).fill(128), width: 600, height: 900 };
     const r = detectPanel(g, [280, 400, 320, 480]);
     expect(r).toEqual(generousCrop(600, 900, [280, 400, 320, 480]));
-    expect(r[2] - r[0]).toBeGreaterThanOrEqual(270);
+    expect(r[2] - r[0]).toBeGreaterThanOrEqual(240);
   });
 });

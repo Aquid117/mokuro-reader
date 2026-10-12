@@ -1,11 +1,7 @@
 /**
- * Panel-sized crop around a speech bubble.
- *
- * Mokuro gives text-box boxes, not panel coordinates, so the panel is detected from the page itself:
- * starting at the bubble, each edge moves outward until it reaches a *gutter* — a band of near-white
- * lines spanning the current crop that is preceded by a dark panel border. Edges that never meet a
- * gutter stop at the page edge (bleed panels). If the result is implausible (most of the page), a
- * generous fixed margin around the bubble is used instead.
+ * Panel-sized crop around a speech bubble. Mokuro gives text-box boxes, not panel coordinates, so the
+ * panel is detected from the page itself (see detectPanel). If the result is implausible (most of the
+ * page, or no gutters at all), a margin around the bubble is used instead.
  */
 export interface Gray {
   data: Uint8Array; // one byte per pixel, row-major
@@ -14,65 +10,12 @@ export interface Gray {
 }
 export type Rect = [number, number, number, number]; // x0, y0, x1, y1 (x1/y1 exclusive)
 
-const WHITE = 225;
-const DARK = 110;
-
-function columnStats(g: Gray, x: number, y0: number, y1: number) {
-  let white = 0;
-  let dark = 0;
-  for (let y = y0; y < y1; y++) {
-    const v = g.data[y * g.width + x];
-    if (v >= WHITE) white++;
-    else if (v <= DARK) dark++;
-  }
-  const n = Math.max(1, y1 - y0);
-  return { white: white / n, dark: dark / n };
-}
-
-function rowStats(g: Gray, y: number, x0: number, x1: number) {
-  let white = 0;
-  let dark = 0;
-  const off = y * g.width;
-  for (let x = x0; x < x1; x++) {
-    const v = g.data[off + x];
-    if (v >= WHITE) white++;
-    else if (v <= DARK) dark++;
-  }
-  const n = Math.max(1, x1 - x0);
-  return { white: white / n, dark: dark / n };
-}
-
 /**
- * Walk from `start` in direction `step` (±1) up to `limit` (exclusive bound) and return the coordinate of
- * the panel border (the last line inside the panel), or `limit - step` if no gutter is found.
+ * Gutters are the background (white, or black on dark pages) connected to the page margin. Flood-fill
+ * that background from the margins — only through pixels whose 3x3 neighbourhood is all background, so
+ * 1–2 px gaps in panel borders and thin, blurred border lines still block — then take the connected
+ * region of everything *not* reached that contains the bubble: that region is the bubble's panel.
  */
-function findEdge(
-  stats: (pos: number) => { white: number; dark: number },
-  start: number,
-  step: 1 | -1,
-  limit: number,
-  minBand: number
-): number {
-  let band = 0;
-  let sawBorder = false;
-  for (let pos = start; pos !== limit; pos += step) {
-    const s = stats(pos);
-    if (s.white >= 0.97) {
-      band++;
-      if (band >= minBand && sawBorder) return pos - step * band;
-    } else {
-      const isBorder = s.dark >= 0.45;
-      // A wide white band that ends in busy artwork (not a border line) is an unframed gutter. A white band
-      // that ends in a border line was a white panel interior: keep going, the gutter lies beyond.
-      if (!isBorder && band >= minBand * 4) return pos - step * (band + 1);
-      sawBorder = isBorder || (sawBorder && band === 0 && s.dark >= 0.2);
-      band = 0;
-    }
-  }
-  if (band >= minBand * 2) return limit - step * (band + 1);
-  return limit - step;
-}
-
 export function detectPanel(g: Gray, bubble: Rect): Rect {
   const W = g.width;
   const H = g.height;
@@ -83,25 +26,136 @@ export function detectPanel(g: Gray, bubble: Rect): Rect {
     Math.max(1, Math.min(H, Math.round(r[3])))
   ];
   const b = clampRect(bubble);
-  const minBand = Math.max(2, Math.round(Math.min(W, H) * 0.004));
-  let [x0, y0, x1, y1] = b;
+  const d = g.data;
 
-  for (let pass = 0; pass < 2; pass++) {
-    x0 = findEdge((x) => columnStats(g, x, y0, y1), b[0] - 1, -1, -1, minBand);
-    x1 = findEdge((x) => columnStats(g, x, y0, y1), b[2], 1, W, minBand) + 1;
-    y0 = findEdge((y) => rowStats(g, y, x0, x1), b[1] - 1, -1, -1, minBand);
-    y1 = findEdge((y) => rowStats(g, y, x0, x1), b[3], 1, H, minBand) + 1;
-    x0 = Math.min(x0, b[0]);
-    y0 = Math.min(y0, b[1]);
-    x1 = Math.max(x1, b[2]);
-    y1 = Math.max(y1, b[3]);
+  // margin colour decides what "background" means
+  let marginSum = 0;
+  let marginN = 0;
+  for (let x = 0; x < W; x++) {
+    marginSum += d[x] + d[(H - 1) * W + x];
+    marginN += 2;
+  }
+  for (let y = 0; y < H; y++) {
+    marginSum += d[y * W] + d[y * W + W - 1];
+    marginN += 2;
+  }
+  const darkPage = marginSum / marginN < 90;
+  const bg = new Uint8Array(W * H);
+  for (let i = 0; i < d.length; i++) bg[i] = darkPage ? (d[i] <= 40 ? 1 : 0) : d[i] >= 225 ? 1 : 0;
+  // erode: a pixel is passable only if it and its 8 neighbours are background
+  const pass = new Uint8Array(W * H);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      if (
+        bg[i] &&
+        bg[i - 1] &&
+        bg[i + 1] &&
+        bg[i - W] &&
+        bg[i + W] &&
+        bg[i - W - 1] &&
+        bg[i - W + 1] &&
+        bg[i + W - 1] &&
+        bg[i + W + 1]
+      )
+        pass[i] = 1;
+    }
+  }
+  for (let x = 0; x < W; x++) {
+    pass[x] = bg[x];
+    pass[(H - 1) * W + x] = bg[(H - 1) * W + x];
+  }
+  for (let y = 0; y < H; y++) {
+    pass[y * W] = bg[y * W];
+    pass[y * W + W - 1] = bg[y * W + W - 1];
   }
 
+  // 1) flood the outside (margins + gutters)
+  const outside = new Uint8Array(W * H);
+  const stack = new Int32Array(W * H);
+  let sp = 0;
+  const seed = (i: number) => {
+    if (pass[i] && !outside[i]) {
+      outside[i] = 1;
+      stack[sp++] = i;
+    }
+  };
+  for (let x = 0; x < W; x++) {
+    seed(x);
+    seed((H - 1) * W + x);
+  }
+  for (let y = 0; y < H; y++) {
+    seed(y * W);
+    seed(y * W + W - 1);
+  }
+  while (sp > 0) {
+    const i = stack[--sp];
+    const x = i % W;
+    if (x > 0) seed(i - 1);
+    if (x < W - 1) seed(i + 1);
+    if (i >= W) seed(i - W);
+    if (i < (H - 1) * W) seed(i + W);
+  }
+  let outsideCount = 0;
+  for (let i = 0; i < outside.length; i++) outsideCount += outside[i];
+  if (outsideCount < 0.02 * W * H) return generousCrop(W, H, b); // full-bleed page: no gutters to find
+
+  // 2) the non-outside component that contains the bubble
+  const cx = Math.round((b[0] + b[2]) / 2);
+  const cy = Math.round((b[1] + b[3]) / 2);
+  let start = -1;
+  for (let r = 0; r < Math.max(b[2] - b[0], b[3] - b[1]) && start < 0; r++) {
+    for (let dy = -r; dy <= r && start < 0; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < b[0] || x >= b[2] || y < b[1] || y >= b[3]) continue;
+        if (!outside[y * W + x]) {
+          start = y * W + x;
+          break;
+        }
+      }
+  }
+  if (start < 0) return generousCrop(W, H, b);
+  const seen = new Uint8Array(W * H);
+  let x0 = W,
+    y0 = H,
+    x1 = 0,
+    y1 = 0,
+    count = 0;
+  sp = 0;
+  stack[sp++] = start;
+  seen[start] = 1;
+  while (sp > 0) {
+    const i = stack[--sp];
+    const x = i % W;
+    const y = (i - x) / W;
+    count++;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+    const nb = [
+      x > 0 ? i - 1 : -1,
+      x < W - 1 ? i + 1 : -1,
+      y > 0 ? i - W : -1,
+      y < H - 1 ? i + W : -1
+    ];
+    for (const j of nb) {
+      if (j >= 0 && !seen[j] && !outside[j]) {
+        seen[j] = 1;
+        stack[sp++] = j;
+      }
+    }
+  }
+  x0 = Math.min(x0, b[0]);
+  y0 = Math.min(y0, b[1]);
+  x1 = Math.max(x1 + 1, b[2]);
+  y1 = Math.max(y1 + 1, b[3]);
   const area = (x1 - x0) * (y1 - y0);
   const bubbleArea = (b[2] - b[0]) * (b[3] - b[1]);
-  if (area > 0.6 * W * H || area < bubbleArea * 1.2) return generousCrop(W, H, b);
-  // a little breathing room so the border line itself is visible
-  const pad = Math.round(Math.min(W, H) * 0.006);
+  if (area > 0.6 * W * H || area < bubbleArea * 1.2 || count < 50) return generousCrop(W, H, b);
+  const pad = Math.round(Math.min(W, H) * 0.008);
   return clampRect([x0 - pad, y0 - pad, x1 + pad, y1 + pad]);
 }
 
@@ -109,8 +163,8 @@ export function detectPanel(g: Gray, bubble: Rect): Rect {
 export function generousCrop(W: number, H: number, b: Rect): Rect {
   const bw = b[2] - b[0];
   const bh = b[3] - b[1];
-  const wantW = Math.max(bw * 2.5, W * 0.45);
-  const wantH = Math.max(bh * 2, H * 0.3);
+  const wantW = Math.min(W, Math.max(bw * 1.6, W * 0.4));
+  const wantH = Math.min(H, Math.max(bh * 2, H * 0.25));
   const cx = (b[0] + b[2]) / 2;
   const cy = (b[1] + b[3]) / 2;
   let x0 = cx - wantW / 2;
