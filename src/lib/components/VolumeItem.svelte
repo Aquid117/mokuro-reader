@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+  import { openCloudVolume } from '$lib/streaming/progressive';
   import {
     deleteVolume as deleteVolumeStats,
     progress,
@@ -190,7 +191,13 @@
 
   function onOpenClicked() {
     if (isNotInstalled) {
-      onDownloadClicked();
+      // manga-immersion fork: open streams (pages load in the background); the download button stays a
+      // full offline download
+      if (!downloadFileId) {
+        showSnackbar(`${volName} is not in the connected cloud storage`);
+        return;
+      }
+      void openCloudVolume(volume, $routeParams.manga);
       return;
     }
     if ($routeParams.manga) nav.toReader($routeParams.manga, volume_uuid);
