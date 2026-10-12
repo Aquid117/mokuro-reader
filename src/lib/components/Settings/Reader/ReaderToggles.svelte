@@ -50,10 +50,11 @@
           value: $settings.disableAnimations
         },
         {
-          key: 'streamVolumes',
-          text: 'Stream cloud volumes',
-          value: $settings.streamVolumes,
-          description: 'Open a cloud volume right away; its pages load in the background'
+          key: 'progressiveStreaming',
+          text: 'Stream cloud volumes (experimental)',
+          value: $settings.progressiveStreaming,
+          description:
+            'Open a cloud volume after its first pages; the rest load in the background. Off = full download first (reliable).'
         },
         {
           key: 'textBoxContextMenu',

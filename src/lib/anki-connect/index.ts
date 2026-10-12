@@ -230,8 +230,22 @@ export function resolveTemplate(
  * Fetches connection data from AnkiConnect including decks, models, and fields.
  * Also detects if running on AnkiConnect Android by testing createDeck support.
  */
+
+/**
+ * manga-immersion fork: the AnkiConnect bridge lives on the reader's own origin (/api/anki). Any URL
+ * ending in /api/anki — or an empty/default one — resolves to the current origin, so a URL saved on one
+ * device or address (e.g. a debug tunnel) can never point another device at the wrong host.
+ */
+export function resolveAnkiUrl(raw?: string | null): string {
+  const value = (raw ?? '').trim();
+  const origin = typeof location !== 'undefined' ? location.origin : '';
+  if (!value || value === 'http://127.0.0.1:8765' || /\/api\/anki\/?$/.test(value))
+    return `${origin}/api/anki`;
+  return value;
+}
+
 export async function fetchConnectionData(testUrl?: string): Promise<AnkiConnectionData | null> {
-  const url = testUrl || get(settings).ankiConnectSettings.url || 'http://127.0.0.1:8765';
+  const url = resolveAnkiUrl(testUrl || get(settings).ankiConnectSettings.url);
 
   try {
     // Test connection first
@@ -479,7 +493,7 @@ async function requestAnkiPermission(url: string): Promise<boolean> {
  * If CORS blocks the request, attempts to request permission from Anki.
  */
 export async function testConnection(testUrl?: string): Promise<ConnectionTestResult> {
-  const url = testUrl || get(settings).ankiConnectSettings.url || 'http://127.0.0.1:8765';
+  const url = resolveAnkiUrl(testUrl || get(settings).ankiConnectSettings.url);
 
   try {
     const res = await fetch(url, {
@@ -546,7 +560,7 @@ export async function ankiConnect(
   params: Record<string, any>,
   options?: { silent?: boolean; retried?: boolean }
 ) {
-  const url = get(settings).ankiConnectSettings.url || 'http://127.0.0.1:8765';
+  const url = resolveAnkiUrl(get(settings).ankiConnectSettings.url);
 
   try {
     const res = await fetch(url, {

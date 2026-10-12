@@ -9,7 +9,7 @@
   import { familiarityApi } from '$lib/familiarity/api';
   import { setMiningWord, readingToKana } from '$lib/familiarity/mining-context';
   import { collectTextSegments, sliceRange } from '$lib/familiarity/offsets';
-  import { vocabKey, type OverrideState } from '$lib/familiarity/types';
+  import { vocabKey, type OverrideState, type VocabEntry } from '$lib/familiarity/types';
   import { settings } from '$lib/settings';
   import { showSnackbar } from '$lib/util';
 
@@ -21,6 +21,25 @@
    */
   let word = $derived($popupWord);
   let busy = $state(false);
+  /** set after a first "Add to Anki" tap on a word Jiten already tracks; the second tap adds anyway */
+  let confirmKnown = $state(false);
+  let lastWordKey = '';
+  $effect(() => {
+    const key = word ? `${word.token.w}:${word.token.r}:${word.token.s}` : '';
+    if (key !== lastWordKey) {
+      lastWordKey = key;
+      confirmKnown = false;
+    }
+  });
+
+  const KNOWN_STATES: Record<number, string> = { 1: 'Young', 2: 'Mature', 4: 'Due', 5: 'Mastered' };
+  /** Why this word probably should not be mined again (empty when it is new to the user). */
+  function knownReason(v: VocabEntry | undefined): string {
+    if (!v) return '';
+    if (v.mined) return 'You already mined this word from manga.';
+    const states = v.jiten.filter((st) => st in KNOWN_STATES).map((st) => KNOWN_STATES[st]);
+    return states.length ? `Already in your cards (Jiten: ${states.join(', ')}).` : '';
+  }
   let panel: HTMLDivElement | undefined = $state();
   let pos = $state({ left: 0, top: 0 });
 
@@ -82,6 +101,10 @@
 
   function addToAnki() {
     if (!word) return;
+    if (!confirmKnown && knownReason(word.vocab)) {
+      confirmKnown = true;
+      return;
+    }
     if (!$settings.ankiConnectSettings.enabled) {
       showSnackbar('Enable AnkiConnect in the settings first');
       return;
@@ -167,11 +190,26 @@
     {/if}
 
     <div class="mt-3 grid grid-cols-2 gap-1.5">
-      <button
-        class="rounded bg-primary-600 px-2 py-2 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-        disabled={busy}
-        onclick={addToAnki}>Add to Anki</button
-      >
+      {#if confirmKnown}
+        <div class="col-span-2 rounded bg-amber-900/60 px-2 py-1.5 text-xs text-amber-100">
+          {knownReason(v)} Add it anyway?
+        </div>
+        <button
+          class="rounded bg-amber-600 px-2 py-2 font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+          disabled={busy}
+          onclick={addToAnki}>Add anyway</button
+        >
+        <button
+          class="rounded bg-gray-700 px-2 py-2 hover:bg-gray-600"
+          onclick={() => (confirmKnown = false)}>Cancel</button
+        >
+      {:else}
+        <button
+          class="rounded bg-primary-600 px-2 py-2 font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          disabled={busy}
+          onclick={addToAnki}>Add to Anki{knownReason(v) ? ' ⚠' : ''}</button
+        >
+      {/if}
       <button
         class="rounded bg-gray-700 px-2 py-2 hover:bg-gray-600 disabled:opacity-50"
         disabled={busy}

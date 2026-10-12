@@ -216,8 +216,8 @@ export type Settings = {
   ankiConnectSettings: AnkiConnectSettings;
   catalogSettings: CatalogSettings;
   familiarity: FamiliaritySettings;
-  /** manga-immersion fork: open cloud volumes immediately and load pages in the background */
-  streamVolumes: boolean;
+  /** manga-immersion fork (experimental, default off): open cloud volumes after the first pages, load the rest in the background */
+  progressiveStreaming: boolean;
   lastUpdated?: string; // ISO 8601 timestamp for sync conflict resolution
   deletedOn?: string; // ISO 8601 timestamp when profile was deleted (tombstone)
 };
@@ -408,7 +408,7 @@ const defaultSettings: Settings = {
     hasCover: true
   },
   ankiConnectSettings: {
-    url: 'http://127.0.0.1:8765',
+    url: '/api/anki',
     enabled: false,
     connectionData: null,
     androidModeOverride: 'auto',
@@ -438,7 +438,7 @@ const defaultSettings: Settings = {
     pushProgressToAniList: true
   },
   familiarity: defaultFamiliaritySettings,
-  streamVolumes: true
+  progressiveStreaming: false
 };
 
 // Mobile-optimized default settings

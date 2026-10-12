@@ -93,6 +93,7 @@
     volumeTitle: $volumes[volumeUuid]?.volume_title
   });
 
+  // manga-immersion fork: the menu only collapses when its button is tapped again
   let open = $state(false);
 
   function handleZoom() {
@@ -104,17 +105,14 @@
       // mode setting, so "fit" means switching it (the Z-key path).
       updateSetting('continuousZoomDefault', 'zoomFitToScreen');
     }
-    open = false;
   }
 
   function handleLeft(_e: Event) {
     left(_e, true);
-    open = false;
   }
 
   function handleRight(_e: Event) {
     right(_e, true);
-    open = false;
   }
 
   async function onUpdateCard(src: File | undefined, page?: Page, pageNumber?: number) {
@@ -122,7 +120,6 @@
       // Show text box picker first, then dispatch to create/update based on cardMode
       showTextBoxPicker(URL.createObjectURL(src), page, ankiTags, volumeMetadata, pageNumber);
     }
-    open = false;
   }
 
   function toggleMenu() {
@@ -139,7 +136,6 @@
           <button
             onclick={() => {
               layersOpen = !layersOpen;
-              open = false;
             }}
             class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-gray-300 shadow-lg hover:bg-gray-600 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             aria-label="OCR layers"
@@ -151,7 +147,6 @@
         <button
           onclick={() => {
             onEdit?.();
-            open = false;
           }}
           disabled={!editEnabled}
           title={editEnabled
@@ -194,7 +189,6 @@
         <button
           onclick={() => {
             updateSetting('alwaysShowOCR', !$settings.alwaysShowOCR);
-            open = false;
           }}
           class="flex h-12 w-12 items-center justify-center rounded-full shadow-lg focus:outline-none {$settings.alwaysShowOCR
             ? 'bg-primary-600 text-white hover:bg-primary-700'
@@ -211,7 +205,6 @@
         <button
           onclick={() => {
             toggleFullScreen();
-            open = false;
           }}
           class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-gray-300 shadow-lg hover:bg-gray-600 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           aria-label="Toggle fullscreen"

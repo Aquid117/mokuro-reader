@@ -27,6 +27,8 @@ import { showSnackbar } from '$lib/util';
 import { RemoteZip, type RemoteZipEntry } from './remote-zip';
 import { mapPagesToEntries } from './page-map';
 import { setOverlay, getOverlay, dropOverlay } from './overlay';
+import { trackOpen } from './open-tracker';
+import { reportClientIssue, withTimeout } from './diagnostics';
 
 export interface StreamStatus {
   done: number;
@@ -77,8 +79,8 @@ function setStatus(uuid: string, s: StreamStatus | null): void {
 }
 
 function canStream(volume: VolumeMetadata): boolean {
-  const s = get(settings) as { streamVolumes?: boolean };
-  if (s.streamVolumes === false) return false;
+  const s = get(settings) as { progressiveStreaming?: boolean };
+  if (s.progressiveStreaming !== true) return false;
   return (
     getCloudProvider(volume) === 'webdav' &&
     !!getCloudFileId(volume) &&
@@ -116,9 +118,23 @@ function pageFile(entry: string, data: Uint8Array): File {
  * Entry point for a tap on a not-installed volume. Streams when possible, otherwise (or on any error
  * before the volume is installed) falls back to the regular full download.
  */
+function fullDownloadAndOpen(volume: VolumeMetadata, seriesId?: string): void {
+  const fileId = getCloudFileId(volume);
+  if (fileId) {
+    trackOpen({
+      uuid: volume.volume_uuid,
+      fileId,
+      title: volume.volume_title,
+      seriesTitle: volume.series_title,
+      seriesId
+    });
+  }
+  downloadQueue.queueVolume(volume);
+}
+
 export async function openCloudVolume(volume: VolumeMetadata, seriesId?: string): Promise<void> {
   if (!canStream(volume)) {
-    downloadQueue.queueVolume(volume);
+    fullDownloadAndOpen(volume, seriesId);
     return;
   }
   const fileId = getCloudFileId(volume)!;
@@ -212,8 +228,11 @@ export async function openCloudVolume(volume: VolumeMetadata, seriesId?: string)
     else setTimeout(() => setStatus(uuid, null), 3000);
   } catch (e) {
     console.warn('[stream] falling back to full download:', e);
+    reportClientIssue('stream open failed, falling back', {
+      err: String((e as Error)?.message ?? e)
+    });
     setStatus(volume.volume_uuid, null);
-    downloadQueue.queueVolume(volume);
+    fullDownloadAndOpen(volume, seriesId);
   } finally {
     active.delete(volume.volume_uuid);
   }
@@ -239,14 +258,22 @@ async function fill(uuid: string, zipIn?: RemoteZip): Promise<void> {
     const total = row.page_count || pending.pages.length;
 
     // restore pages fetched before a reload
-    const cache =
-      typeof caches !== 'undefined' ? await caches.open(CACHE_NAME).catch(() => null) : null;
-    if (cache) {
-      for (const [, entry] of pending.pages) {
-        if (ov.fetched.has(entry)) continue;
-        const hit = await cache.match(cacheKey(uuid, entry));
-        if (hit) ov.fetched.set(entry, pageFile(entry, new Uint8Array(await hit.arrayBuffer())));
+    let cache: Cache | null = null;
+    try {
+      if (typeof caches !== 'undefined')
+        cache = await withTimeout(caches.open(CACHE_NAME), 3000, 'caches.open');
+      if (cache) {
+        for (const [, entry] of pending.pages) {
+          if (ov.fetched.has(entry)) continue;
+          const hit = await withTimeout(cache.match(cacheKey(uuid, entry)), 3000, 'cache.match');
+          if (hit) ov.fetched.set(entry, pageFile(entry, new Uint8Array(await hit.arrayBuffer())));
+        }
       }
+    } catch (e) {
+      reportClientIssue('stream page cache unavailable, continuing without it', {
+        err: String((e as Error)?.message ?? e)
+      });
+      cache = null;
     }
     const absent = pending.absent ?? [];
     const missingOf = () => pending.pages.filter(([, e]) => !ov.fetched.has(e));
@@ -283,6 +310,10 @@ async function fill(uuid: string, zipIn?: RemoteZip): Promise<void> {
         failures = 0;
       } catch (e) {
         failures++;
+        reportClientIssue('stream batch failed', {
+          failures,
+          err: String((e as Error)?.message ?? e)
+        });
         if (failures >= 4) {
           setStatus(uuid, {
             done: total - missingOf().length,
@@ -299,7 +330,17 @@ async function fill(uuid: string, zipIn?: RemoteZip): Promise<void> {
         const entry = normalizeFilename(name);
         const file = pageFile(entry, bytes);
         ov.fetched.set(entry, file);
-        if (cache) await cache.put(cacheKey(uuid, entry), new Response(file)).catch(() => {});
+        if (cache) {
+          try {
+            await withTimeout(
+              cache.put(cacheKey(uuid, entry), new Response(file)),
+              3000,
+              'cache.put'
+            );
+          } catch {
+            cache = null;
+          }
+        }
       }
       await touchRow(uuid, stillMissing());
     }
@@ -326,6 +367,7 @@ async function fill(uuid: string, zipIn?: RemoteZip): Promise<void> {
     setTimeout(() => setStatus(uuid, null), 4000);
   } catch (e) {
     console.warn('[stream] background fill stopped:', e);
+    reportClientIssue('stream fill stopped', { err: String((e as Error)?.message ?? e) });
     const s = get(streamStatus)[uuid];
     setStatus(uuid, {
       done: s?.done ?? 0,

@@ -3,6 +3,7 @@
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
   import NavBar from '$lib/components/NavBar.svelte';
+  import DownloadOverlay from '$lib/components/DownloadOverlay.svelte';
   import Snackbar from '$lib/components/Snackbar.svelte';
   import ConfirmationPopup from '$lib/components/ConfirmationPopup.svelte';
   import ExtractionModal from '$lib/components/ExtractionModal.svelte';
@@ -147,6 +148,7 @@
     <NavBar />
     {@render children?.()}
     <Snackbar />
+    <DownloadOverlay />
     <ConfirmationPopup />
     <ExtractionModal />
     <ImageOnlyImportModal />
