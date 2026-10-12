@@ -3,6 +3,7 @@
   import {
     CloudArrowUpOutline,
     UploadSolid,
+    DownloadOutline,
     UserSettingsSolid,
     RefreshOutline,
     ChartLineUpOutline,
@@ -166,6 +167,15 @@
       </button>
       <button onclick={openSettings} class="flex h-6 w-6 items-center justify-center">
         <UserSettingsSolid class="h-6 w-6 cursor-pointer hover:text-primary-700" />
+      </button>
+      <!-- manga-immersion fork: server-side import from mokuro.moe -->
+      <button
+        onclick={() => (window.location.hash = '#/import')}
+        class="flex h-6 w-6 items-center justify-center"
+        aria-label="Import from mokuro.moe"
+        title="Import from mokuro.moe"
+      >
+        <DownloadOutline class="h-6 w-6 cursor-pointer hover:text-primary-700" />
       </button>
       <button onclick={openUploadModal} class="flex h-6 w-6 items-center justify-center">
         <UploadSolid class="h-6 w-6 cursor-pointer hover:text-primary-700" />

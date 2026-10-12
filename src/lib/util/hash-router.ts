@@ -21,6 +21,7 @@ export type View =
   | { type: 'series-text'; seriesId: string }
   | { type: 'cloud' }
   | { type: 'upload' }
+  | { type: 'import' }
   | { type: 'reading-speed' }
   | { type: 'merge-series' }
   | { type: 'progress-tracker' }
@@ -50,6 +51,7 @@ export function parseHash(hash: string): View {
     }
     if (segments[0] === 'cloud') return { type: 'cloud' };
     if (segments[0] === 'upload') return { type: 'upload' };
+    if (segments[0] === 'import') return { type: 'import' };
     if (segments[0] === 'reading-speed') return { type: 'reading-speed' };
     if (segments[0] === 'merge-series') return { type: 'merge-series' };
     if (segments[0] === 'progress-tracker') return { type: 'progress-tracker' };
@@ -96,6 +98,8 @@ export function viewToHash(view: View): string {
       return `#/series/${encodeURIComponent(view.seriesId)}/text`;
     case 'cloud':
       return '#/cloud';
+    case 'import':
+      return '#/import';
     case 'upload':
       return '#/upload';
     case 'reading-speed':
