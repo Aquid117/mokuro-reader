@@ -27,8 +27,11 @@ export function clearMiningWord(): void {
 
 function lookup(text?: string): MiningWord | null {
   const t = text?.trim();
-  if (explicit && Date.now() - explicit.at < EXPLICIT_TTL && (!t || explicit.text === t))
-    return explicit;
+  // A word chosen in the popup moments ago wins even if the captured text differs (the reader may fall
+  // back to the whole sentence); otherwise the explicit word only applies to a matching selection.
+  if (explicit && Date.now() - explicit.at < EXPLICIT_TTL) {
+    if (!t || explicit.text === t || Date.now() - explicit.at < 60_000) return explicit;
+  }
   if (!t) return null;
   const hit = findHitByText(t);
   return hit?.vocab ? { token: hit.token, entry: hit.vocab, text: t, at: Date.now() } : null;
