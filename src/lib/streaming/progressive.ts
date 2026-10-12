@@ -118,7 +118,7 @@ function pageFile(entry: string, data: Uint8Array): File {
  * Entry point for a tap on a not-installed volume. Streams when possible, otherwise (or on any error
  * before the volume is installed) falls back to the regular full download.
  */
-function fullDownloadAndOpen(volume: VolumeMetadata, seriesId?: string): void {
+export function fullDownloadAndOpen(volume: VolumeMetadata, seriesId?: string): void {
   const fileId = getCloudFileId(volume);
   if (fileId) {
     trackOpen({
@@ -394,10 +394,22 @@ function forget(uuid: string): void {
   writePending(p);
 }
 
-/** Resume: called by streaming/resume.ts whenever the reader opens a volume. */
+export function hasPendingStream(uuid: string): boolean {
+  return !!readPending()[uuid];
+}
+
+export function forgetPendingStream(uuid: string): void {
+  forget(uuid);
+}
+
+export function streamingEnabled(): boolean {
+  return (get(settings) as { progressiveStreaming?: boolean }).progressiveStreaming === true;
+}
+
+/** Resume: called by streaming/resume.ts whenever the reader opens a volume (only while streaming is on). */
 export function resumeIfPending(v: VolumeMetadata | undefined): void {
   const uuid = v?.volume_uuid;
-  if (!uuid) return;
+  if (!uuid || !streamingEnabled()) return;
   const pending = readPending()[uuid];
   if (!pending) return;
   if (!v?.missing_pages) {
