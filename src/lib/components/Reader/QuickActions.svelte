@@ -13,8 +13,10 @@
     PlusOutline,
     EyeOutline,
     EyeSlashOutline,
-    RefreshOutline
+    RefreshOutline,
+    LightbulbOutline
   } from 'flowbite-svelte-icons';
+  import { aiStatus, aiAvailable, refreshAiStatus } from '$lib/ai/store';
   import {
     ankiSync,
     refreshAnkiSync,
@@ -133,6 +135,22 @@
   function toggleMenu() {
     open = !open;
     if (open && $settings.ankiConnectSettings.enabled) void refreshAnkiSync();
+    if (open && $aiStatus === null) void refreshAiStatus();
+  }
+
+  let canExplain = $derived(aiAvailable($aiStatus, $settings.ai?.enabled));
+
+  function onExplain(src: File | undefined, page?: Page, pageNumber?: number) {
+    if (src && page) {
+      showTextBoxPicker(
+        URL.createObjectURL(src),
+        page,
+        ankiTags,
+        volumeMetadata,
+        pageNumber,
+        'explain'
+      );
+    }
   }
 
   async function handleAnkiSync() {
@@ -199,6 +217,36 @@
               >2</span
             >
           </button>
+        {/if}
+        {#if canExplain && page1}
+          <!-- manga-immersion fork: pick a bubble and get an AI explanation -->
+          <button
+            onclick={() => onExplain(src1, page1, page1Number)}
+            class="relative flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-gray-300 shadow-lg hover:bg-gray-600 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            aria-label="Explain a bubble"
+            title="Explain a bubble (AI)"
+          >
+            <LightbulbOutline size="xl" />
+            {#if src2}
+              <span
+                class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white"
+                >1</span
+              >
+            {/if}
+          </button>
+          {#if src2 && page2}
+            <button
+              onclick={() => onExplain(src2, page2, page2Number)}
+              class="relative flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-gray-300 shadow-lg hover:bg-gray-600 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              aria-label="Explain a bubble on page 2"
+            >
+              <LightbulbOutline size="xl" />
+              <span
+                class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white"
+                >2</span
+              >
+            </button>
+          {/if}
         {/if}
         {#if $settings.ankiConnectSettings.enabled}
           <!-- manga-immersion fork: force the server-side Anki to sync with AnkiWeb now -->

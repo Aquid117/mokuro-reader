@@ -16,6 +16,8 @@
   import { showSnackbar } from '$lib/util';
   import { onMount } from 'svelte';
   import { textBoxPickerStore } from './text-box-picker';
+  import { contextFromPage } from '$lib/ai/context';
+  import { openExplain, aiStatus, aiAvailable } from '$lib/ai/store';
 
   let open = $state(false);
   let image = $state<string | undefined>(undefined);
@@ -23,6 +25,8 @@
   let pageNumber = $state<number | undefined>(undefined);
   let tags = $state<string | undefined>(undefined);
   let metadata = $state<VolumeMetadata | undefined>(undefined);
+  let purpose = $state<'anki' | 'explain'>('anki');
+  let canExplain = $derived(aiAvailable($aiStatus, $settings.ai?.enabled));
 
   // Track which block is currently selected (for highlighting)
   let selectedBlockIndex = $state<number | null>(null);
@@ -70,6 +74,7 @@
       pageNumber = value.pageNumber;
       tags = value.tags;
       metadata = value.metadata;
+      purpose = value.purpose ?? 'anki';
 
       if (value.open) {
         selectedBlockIndex = null;
@@ -84,6 +89,25 @@
   function close() {
     selectedBlockIndex = null;
     textBoxPickerStore.set({ open: false });
+  }
+
+  // manga-immersion fork: hand the selected bubble (plus its neighbours) to the AI explanation panel
+  async function handleExplain() {
+    if (selectedBlockIndex === null || !page || !image) return;
+    const block = page.blocks[selectedBlockIndex];
+    if (!block) return;
+    const ctx = contextFromPage(page, selectedBlockIndex, {
+      series: metadata?.seriesTitle,
+      volume: metadata?.volumeTitle,
+      page: pageNumber
+    });
+    const pageSize = { width: page.img_width, height: page.img_height };
+    const bubble = block.box as [number, number, number, number];
+    const blob = await fetch(image)
+      .then((r) => r.blob())
+      .catch(() => null);
+    close();
+    openExplain(ctx, blob ? { blob, bubble, pageSize } : null);
   }
 
   async function handleContinue() {
@@ -217,7 +241,7 @@
 </script>
 
 <Modal
-  title="Select Text Box"
+  title={purpose === 'explain' ? 'Select a bubble to explain' : 'Select Text Box'}
   bind:open
   size="lg"
   onclose={close}
@@ -248,9 +272,24 @@
 
       <div class="relative z-10 flex justify-end gap-2">
         <Button color="alternative" onclick={close}>Cancel</Button>
-        <Button color="primary" onclick={handleContinue} disabled={selectedBlockIndex === null}>
-          Continue
-        </Button>
+        {#if purpose === 'explain'}
+          <Button color="primary" onclick={handleExplain} disabled={selectedBlockIndex === null}>
+            Explain
+          </Button>
+        {:else}
+          {#if canExplain}
+            <Button
+              color="alternative"
+              onclick={handleExplain}
+              disabled={selectedBlockIndex === null}
+            >
+              Explain
+            </Button>
+          {/if}
+          <Button color="primary" onclick={handleContinue} disabled={selectedBlockIndex === null}>
+            Continue
+          </Button>
+        {/if}
       </div>
     </div>
   {:else}

@@ -31,6 +31,8 @@
     applySettings as applyFamiliaritySettings
   } from '$lib/familiarity';
   import { quickMine } from '$lib/familiarity/quick-mine';
+  import { contextFromPage } from '$lib/ai/context';
+  import { openExplain } from '$lib/ai/store';
   import { collectTextSegments, blockText as joinBlockText } from '$lib/familiarity/offsets';
   import type { ParsedToken, VocabEntry } from '$lib/familiarity/types';
 
@@ -737,6 +739,13 @@
       };
       el.addEventListener('jiten:mine', handler);
       offs.push(() => el.removeEventListener('jiten:mine', handler));
+      const explainHandler = (e: Event) => {
+        e.stopPropagation();
+        const focusWord = (e as CustomEvent<{ focusWord?: string }>).detail?.focusWord;
+        void explainBlock(el, box.blockIndex, focusWord);
+      };
+      el.addEventListener('jiten:explain', explainHandler);
+      offs.push(() => el.removeEventListener('jiten:explain', explainHandler));
     });
     return () => {
       for (const off of offs) off();
@@ -774,6 +783,37 @@
       seriesTitle: volumeMetadata.seriesTitle,
       volumeTitle: volumeMetadata.volumeTitle
     });
+  }
+
+  // manga-immersion fork: AI explanation of a text box (from the word popup)
+  async function explainBlock(el: HTMLElement, blockIndex: number, focusWord?: string) {
+    const block = page.blocks[blockIndex];
+    if (!block) return;
+    const pageNumber = pageIndex != null ? pageIndex + 1 : $volumes[volumeUuid]?.progress || 1;
+    const ctx = contextFromPage(page, blockIndex, {
+      series: volumeMetadata.seriesTitle,
+      volume: volumeMetadata.volumeTitle,
+      page: pageNumber,
+      focusWord
+    });
+    let blob: Blob | null = src ?? null;
+    if (!blob) {
+      const url = getImageUrlFromElement(el);
+      if (url)
+        blob = await fetch(url)
+          .then((r) => r.blob())
+          .catch(() => null);
+    }
+    openExplain(
+      ctx,
+      blob
+        ? {
+            blob,
+            bubble: block.box as [number, number, number, number],
+            pageSize: { width: page.img_width, height: page.img_height }
+          }
+        : null
+    );
   }
 
   function onCopy(event: ClipboardEvent) {

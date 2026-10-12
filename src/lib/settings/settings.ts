@@ -173,6 +173,15 @@ export type FamiliaritySettings = {
   };
 };
 
+/** AI help (manga-immersion fork): sentence explanations through the backend. Synced with the profile. */
+export type AiSettings = {
+  enabled: boolean;
+  /** attach the panel image around the bubble by default */
+  includeImage: boolean;
+};
+
+export const defaultAiSettings: AiSettings = { enabled: true, includeImage: false };
+
 export type Settings = {
   defaultFullscreen: boolean;
   textBoxBorders: boolean;
@@ -218,6 +227,7 @@ export type Settings = {
   ankiConnectSettings: AnkiConnectSettings;
   catalogSettings: CatalogSettings;
   familiarity: FamiliaritySettings;
+  ai: AiSettings;
   /** manga-immersion fork (experimental, default off): open cloud volumes after the first pages, load the rest in the background */
   progressiveStreaming: boolean;
   lastUpdated?: string; // ISO 8601 timestamp for sync conflict resolution
@@ -446,6 +456,7 @@ const defaultSettings: Settings = {
     pushProgressToAniList: true
   },
   familiarity: defaultFamiliaritySettings,
+  ai: defaultAiSettings,
   progressiveStreaming: false
 };
 
@@ -507,6 +518,7 @@ export function migrateProfiles(profiles: Profiles): Profiles {
       colors: { ...defaultFamiliaritySettings.colors, ...(profile.familiarity?.colors || {}) },
       mining: { ...defaultFamiliaritySettings.mining, ...(profile.familiarity?.mining || {}) }
     };
+    migratedProfile.ai = { ...defaultAiSettings, ...(profile.ai || {}) };
 
     // Validate singlePageView at top level: convert legacy boolean to 'auto', or use default for any invalid value
     const validPageViewModes = ['single', 'dual', 'auto'];

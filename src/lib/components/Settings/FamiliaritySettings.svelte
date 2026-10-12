@@ -1,6 +1,13 @@
 <script lang="ts">
   import { AccordionItem, Toggle, Label, Range, Button, Helper } from 'flowbite-svelte';
-  import { settings, updateFamiliaritySetting, defaultFamiliaritySettings } from '$lib/settings';
+  import {
+    settings,
+    updateFamiliaritySetting,
+    defaultFamiliaritySettings,
+    updateSetting
+  } from '$lib/settings';
+  import { defaultAiSettings } from '$lib/settings/settings';
+  import { aiStatus, refreshAiStatus } from '$lib/ai/store';
   import {
     familiarityApi,
     familiarityWarning,
@@ -17,8 +24,11 @@
   import { onMount } from 'svelte';
 
   let now = $state(Date.now());
+  let ai = $derived($settings.ai ?? defaultAiSettings);
+
   onMount(() => {
     void refreshAnkiSync();
+    void refreshAiStatus();
     const t = setInterval(() => {
       now = Date.now();
       void refreshAnkiSync();
@@ -221,6 +231,34 @@
         )} min after the last added card, and every {Math.round(
           ($ankiSync.status?.autoSync?.intervalMin ?? 360) / 60
         )} h. Then sync AnkiMobile/Anki on your devices to see them.
+      </Helper>
+    </div>
+
+    <div class="flex flex-col gap-2 rounded border border-gray-300 p-2 dark:border-gray-600">
+      <Label>AI help (explain a bubble)</Label>
+      <Toggle
+        checked={ai.enabled}
+        onchange={() => updateSetting('ai', { ...ai, enabled: !ai.enabled })}
+      >
+        Show "Explain" (+ menu, word popup, text box picker)
+      </Toggle>
+      <Toggle
+        checked={ai.includeImage}
+        onchange={() => updateSetting('ai', { ...ai, includeImage: !ai.includeImage })}
+      >
+        Send the panel image by default (better context, costs more)
+      </Toggle>
+      <Helper>
+        {#if $aiStatus === null}
+          AI status unavailable.
+        {:else if !$aiStatus.configured}
+          Not configured: no OpenAI API key on the server.
+        {:else}
+          Model {$aiStatus.model} · today {$aiStatus.today.requests}/{$aiStatus.dailyLimit} requests,
+          {Math.round(($aiStatus.today.inputTokens + $aiStatus.today.outputTokens) / 1000)}k tokens.
+          Only the bubble text, its neighbours, the title and (if chosen) the panel image are sent
+          to OpenAI.
+        {/if}
       </Helper>
     </div>
 

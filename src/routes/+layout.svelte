@@ -15,6 +15,7 @@
   import SeriesEditorModal from '$lib/components/Series/SeriesEditorModal.svelte';
   import AnkiFieldModal from '$lib/components/Reader/AnkiFieldModal.svelte';
   import MinePreview from '$lib/components/Reader/MinePreview.svelte';
+  import AiExplainPanel from '$lib/components/Reader/AiExplainPanel.svelte';
   import ImportPreparingModal from '$lib/components/ImportPreparingModal.svelte';
   import ProgressTracker from '$lib/components/ProgressTracker.svelte';
   import NightModeFilter from '$lib/components/NightModeFilter.svelte';
@@ -160,6 +161,7 @@
     <SeriesEditorModal />
     <AnkiFieldModal />
     <MinePreview />
+    <AiExplainPanel />
     <ImportPreparingModal />
     <ProgressTracker />
     <NightModeFilter />

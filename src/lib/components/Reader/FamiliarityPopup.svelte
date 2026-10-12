@@ -12,6 +12,7 @@
   import { vocabKey, type OverrideState, type VocabEntry } from '$lib/familiarity/types';
   import { settings } from '$lib/settings';
   import { showSnackbar } from '$lib/util';
+  import { aiStatus, aiAvailable } from '$lib/ai/store';
 
   /**
    * Jiten word popup (manga-immersion fork): opened by a tap on a highlighted word. Shows reading,
@@ -97,6 +98,17 @@
     } finally {
       busy = false;
     }
+  }
+
+  let canExplain = $derived(aiAvailable($aiStatus, $settings.ai?.enabled));
+
+  /** AI explanation of the word's speech bubble; TextBoxes builds the page context. */
+  function explainSentence() {
+    if (!word) return;
+    const box = word.box;
+    const focusWord = word.text;
+    close();
+    box.dispatchEvent(new CustomEvent('jiten:explain', { detail: { focusWord } }));
   }
 
   function addToAnki() {
@@ -225,6 +237,13 @@
         disabled={busy}
         onclick={() => override('ignore')}>Ignore</button
       >
+      {#if canExplain}
+        <button
+          class="col-span-2 rounded bg-gray-700 px-2 py-2 hover:bg-gray-600 disabled:opacity-50"
+          disabled={busy}
+          onclick={explainSentence}>Explain sentence</button
+        >
+      {/if}
       {#if v?.override}
         <button
           class="col-span-2 rounded bg-gray-800 px-2 py-2 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
