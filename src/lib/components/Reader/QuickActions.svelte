@@ -10,7 +10,9 @@
     ImageOutline,
     LayersOutline,
     ZoomOutOutline,
-    PlusOutline
+    PlusOutline,
+    EyeOutline,
+    EyeSlashOutline
   } from 'flowbite-svelte-icons';
   import LayerPicker from './Layers/LayerPicker.svelte';
   import type { LayerSummary } from '$lib/reader/edit/layer-list';
@@ -188,6 +190,24 @@
             >
           </button>
         {/if}
+        <!-- manga-immersion fork: touch-friendly "always show OCR" toggle (keyboard: T) -->
+        <button
+          onclick={() => {
+            updateSetting('alwaysShowOCR', !$settings.alwaysShowOCR);
+            open = false;
+          }}
+          class="flex h-12 w-12 items-center justify-center rounded-full shadow-lg focus:outline-none {$settings.alwaysShowOCR
+            ? 'bg-primary-600 text-white hover:bg-primary-700'
+            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}"
+          aria-label={$settings.alwaysShowOCR ? 'Hide OCR text' : 'Always show OCR text'}
+          aria-pressed={$settings.alwaysShowOCR}
+        >
+          {#if $settings.alwaysShowOCR}
+            <EyeSlashOutline size="xl" />
+          {:else}
+            <EyeOutline size="xl" />
+          {/if}
+        </button>
         <button
           onclick={() => {
             toggleFullScreen();
