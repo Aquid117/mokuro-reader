@@ -37,9 +37,14 @@ function lookup(text?: string): MiningWord | null {
   return hit?.vocab ? { token: hit.token, entry: hit.vocab, text: t, at: Date.now() } : null;
 }
 
-/** "約[やく]束[そく]" → "やくそく"; plain kana passes through. */
+/**
+ * Jiten ruby → kana: "約[やく]束[そく]" → "やくそく", "突[つ]っ走[ぱし]る" → "つっぱしる".
+ * Only the kanji run directly before each "[...]" is replaced; kana between groups is kept.
+ */
 export function readingToKana(ruby: string): string {
-  return ruby.replace(/[^[\]]+?\[([^\]]+)\]/g, '$1');
+  return ruby
+    .replace(/[\u3400-\u9fff\uf900-\ufaff々〆ヶ]+\[([^\]]+)\]/g, '$1')
+    .replace(/[[\]]/g, '');
 }
 
 export function formatMeaning(meanings: string[][], maxSenses = 3, maxGlosses = 4): string {

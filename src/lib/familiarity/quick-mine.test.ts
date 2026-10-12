@@ -10,6 +10,7 @@ describe('quick mine helpers', () => {
     expect(toAnkiFurigana('お茶[ちゃ]')).toBe('お 茶[ちゃ]');
     expect(toAnkiFurigana('忘[わす]れる')).toBe('忘[わす]れる');
     expect(toAnkiFurigana('けど')).toBe('');
+    expect(toAnkiFurigana('突[つ]っ走[ぱし]る')).toBe('突[つ]っ 走[ぱし]る');
   });
 
   it('extracts the sentence around a word and bolds it', () => {

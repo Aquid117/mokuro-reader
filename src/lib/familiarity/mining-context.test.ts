@@ -7,6 +7,9 @@ describe('mining context helpers', () => {
     expect(readingToKana('友[とも]達[だち]')).toBe('ともだち');
     expect(readingToKana('けど')).toBe('けど');
     expect(readingToKana('忘[わす]れる')).toBe('わすれる');
+    expect(readingToKana('突[つ]っ走[ぱし]る')).toBe('つっぱしる');
+    expect(readingToKana('取[と]り消[け]す')).toBe('とりけす');
+    expect(readingToKana('お茶[ちゃ]')).toBe('おちゃ');
   });
   it('formats meanings compactly', () => {
     expect(formatMeaning([['promise', 'agreement'], ['appointment']])).toBe(
