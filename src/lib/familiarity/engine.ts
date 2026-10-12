@@ -51,6 +51,9 @@ let currentSettings: FamiliaritySettings | null = null;
 let pending: { key: string; text: string; resolve: (t: ParsedToken[]) => void }[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
+/** after a failed/degraded backend answer, do not hammer it: wait before asking again */
+let cooldownUntil = 0;
+const COOLDOWN_MS = 30_000;
 
 function stateToName(state: EffectiveState): HighlightName | null {
   switch (state) {
@@ -92,6 +95,7 @@ function hexToRgba(hex: string, alpha: number): string {
 function requestTokens(key: string, text: string): Promise<ParsedToken[]> {
   const cached = tokenCache.get(text);
   if (cached) return Promise.resolve(cached);
+  if (Date.now() < cooldownUntil) return Promise.resolve([]);
   return new Promise((resolve) => {
     pending.push({ key, text, resolve });
     if (!flushTimer) flushTimer = setTimeout(flush, 40);
@@ -118,9 +122,11 @@ async function flush(): Promise<void> {
       for (const waiter of byText.get(blk.text) ?? []) waiter.resolve(tokens);
     });
     familiarityWarning.set(res.warning ?? null);
+    if (res.warning && res.source === 'none') cooldownUntil = Date.now() + COOLDOWN_MS;
   } catch (e) {
     const msg = e instanceof ApiError ? e.message : 'Familiarity backend unreachable';
     familiarityWarning.set(msg);
+    cooldownUntil = Date.now() + COOLDOWN_MS;
     for (const b of batch) b.resolve([]);
   } finally {
     familiarityBusy.set(false);
@@ -175,6 +181,7 @@ export function clearAll(): void {
 /** Drop cached tokens (after overrides/mining changed states) and re-run every mounted page. */
 export function invalidate(): void {
   tokenCache.clear();
+  cooldownUntil = 0;
   for (const [key, entry] of pages)
     void highlightPage(
       key,
