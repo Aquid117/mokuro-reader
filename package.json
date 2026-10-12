@@ -23,6 +23,7 @@
     "@changesets/cli": "^2.29.8",
     "@playwright/test": "^1.58.2",
     "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.5.27",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tailwindcss/forms": "^0.5.10",
@@ -66,7 +67,6 @@
   "dependencies": {
     "@azure/msal-browser": "^5.8.0",
     "@types/gapi": "^0.0.47",
-    "@vercel/analytics": "^1.5.0",
     "@zip.js/zip.js": "^2.7.57",
     "chart.js": "^4.5.1",
     "cropperjs": "^1.6.2",

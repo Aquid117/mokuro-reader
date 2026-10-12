@@ -1,7 +1,6 @@
 <script lang="ts">
   import '../app.css';
-  import { browser, dev } from '$app/environment';
-  import { inject } from '@vercel/analytics';
+  import { browser } from '$app/environment';
   import { onMount } from 'svelte';
   import NavBar from '$lib/components/NavBar.svelte';
   import Snackbar from '$lib/components/Snackbar.svelte';
@@ -46,8 +45,6 @@
   }
 
   let { children }: Props = $props();
-
-  inject({ mode: dev ? 'development' : 'production' });
 
   onMount(() => {
     return initGoalsLifecycle();
