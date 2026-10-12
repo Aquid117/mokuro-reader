@@ -168,6 +168,8 @@ export type FamiliaritySettings = {
     model: string;
     /** card image: detected panel, just the bubble, or the whole page */
     image: 'panel' | 'bubble' | 'page';
+    /** show the cropped image first, adjustable, and add the card on confirm */
+    preview: boolean;
   };
 };
 
@@ -247,7 +249,13 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
   showMined: true,
   minFrequencyRank: 0,
   popup: true,
-  mining: { oneTap: true, deck: 'Manga Mining', model: 'Manga Mining', image: 'panel' }
+  mining: {
+    oneTap: true,
+    deck: 'Manga Mining',
+    model: 'Manga Mining',
+    image: 'panel',
+    preview: true
+  }
 };
 
 export type TimeScheduleKey = keyof TimeSchedule;

@@ -200,39 +200,42 @@ export async function toGray(
 
 export type CropMode = 'panel' | 'bubble' | 'page';
 
-/**
- * Crop the page image for an Anki card and return base64 JPEG (no data: prefix).
- * `bubble` is in original image pixels; `pageSize` is the OCR page size (img_width/img_height), which can
- * differ from the bitmap size (upscaled releases), so coordinates are rescaled.
- */
-export async function cropForCard(
-  blob: Blob,
+/** Scales an OCR box (page size from the .mokuro file) to the bitmap's pixels (upscaled releases differ). */
+export function bubbleInBitmap(
   bubble: Rect,
   pageSize: { width: number; height: number },
-  mode: CropMode,
-  maxSide = 1000,
-  quality = 0.82
-): Promise<string> {
-  const bitmap = await createImageBitmap(blob);
+  bitmap: { width: number; height: number }
+): Rect {
   const sx = bitmap.width / pageSize.width;
   const sy = bitmap.height / pageSize.height;
-  const bub: Rect = [bubble[0] * sx, bubble[1] * sy, bubble[2] * sx, bubble[3] * sy];
-  let rect: Rect;
-  if (mode === 'page') rect = [0, 0, bitmap.width, bitmap.height];
-  else if (mode === 'bubble') {
+  return [bubble[0] * sx, bubble[1] * sy, bubble[2] * sx, bubble[3] * sy];
+}
+
+/** Crop rectangle (bitmap pixels) for a mode, around a bubble given in bitmap pixels. */
+export async function cropRect(bitmap: ImageBitmap, bub: Rect, mode: CropMode): Promise<Rect> {
+  if (mode === 'page') return [0, 0, bitmap.width, bitmap.height];
+  if (mode === 'bubble') {
     const mx = (bub[2] - bub[0]) * 0.15 + bitmap.width * 0.01;
     const my = (bub[3] - bub[1]) * 0.1 + bitmap.height * 0.01;
-    rect = [
+    return [
       Math.max(0, bub[0] - mx),
       Math.max(0, bub[1] - my),
       Math.min(bitmap.width, bub[2] + mx),
       Math.min(bitmap.height, bub[3] + my)
     ];
-  } else {
-    const { gray, scale } = await toGray(bitmap);
-    const r = detectPanel(gray, [bub[0] * scale, bub[1] * scale, bub[2] * scale, bub[3] * scale]);
-    rect = [r[0] / scale, r[1] / scale, r[2] / scale, r[3] / scale];
   }
+  const { gray, scale } = await toGray(bitmap);
+  const r = detectPanel(gray, [bub[0] * scale, bub[1] * scale, bub[2] * scale, bub[3] * scale]);
+  return [r[0] / scale, r[1] / scale, r[2] / scale, r[3] / scale];
+}
+
+/** JPEG of `rect` (bitmap pixels), long side ≤ maxSide, as base64 without the data: prefix. */
+export async function encodeCrop(
+  bitmap: ImageBitmap,
+  rect: Rect,
+  maxSide = 1000,
+  quality = 0.82
+): Promise<string> {
   const cw = Math.max(1, Math.round(rect[2] - rect[0]));
   const ch = Math.max(1, Math.round(rect[3] - rect[1]));
   const out = Math.min(1, maxSide / Math.max(cw, ch));
@@ -244,11 +247,31 @@ export async function cropForCard(
   if (!ctx) throw new Error('canvas unavailable');
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, rect[0], rect[1], cw, ch, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
   const jpeg = await canvas.convertToBlob({ type: 'image/jpeg', quality });
   const buf = new Uint8Array(await jpeg.arrayBuffer());
   let bin = '';
   for (let i = 0; i < buf.length; i += 0x8000)
     bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
   return btoa(bin);
+}
+
+/**
+ * Crop the page image for an Anki card and return base64 JPEG (no data: prefix).
+ * `bubble` is in OCR page pixels (img_width/img_height).
+ */
+export async function cropForCard(
+  blob: Blob,
+  bubble: Rect,
+  pageSize: { width: number; height: number },
+  mode: CropMode,
+  maxSide = 1000,
+  quality = 0.82
+): Promise<string> {
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const rect = await cropRect(bitmap, bubbleInBitmap(bubble, pageSize, bitmap), mode);
+    return await encodeCrop(bitmap, rect, maxSide, quality);
+  } finally {
+    bitmap.close();
+  }
 }

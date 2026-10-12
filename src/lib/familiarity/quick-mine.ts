@@ -2,7 +2,8 @@ import { get } from 'svelte/store';
 import { settings } from '$lib/settings';
 import { ankiConnect } from '$lib/anki-connect';
 import { showSnackbar } from '$lib/util';
-import { cropForCard, type CropMode, type Rect } from './panel-crop';
+import { bubbleInBitmap, cropRect, encodeCrop, type CropMode, type Rect } from './panel-crop';
+import { requestMinePreview } from './mine-preview';
 import { onNoteAdded, setMiningWord, readingToKana } from './mining-context';
 import { ankiSync, refreshAnkiSync } from './anki-sync';
 import type { ParsedToken, VocabEntry } from './types';
@@ -120,18 +121,37 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
       options: { allowDuplicate: false, duplicateScope: 'collection' }
     };
     if (input.imageBlob) {
+      let bitmap: ImageBitmap | null = null;
+      let imageUrl: string | null = null;
       try {
-        const data = await cropForCard(
-          input.imageBlob,
-          input.bubble,
-          input.pageSize,
-          mining.image as CropMode
-        );
+        bitmap = await createImageBitmap(input.imageBlob);
+        const bubble = bubbleInBitmap(input.bubble, input.pageSize, bitmap);
+        let rect = await cropRect(bitmap, bubble, mining.image as CropMode);
+        if (mining.preview !== false) {
+          imageUrl = URL.createObjectURL(input.imageBlob);
+          const chosen = await requestMinePreview({
+            imageUrl,
+            bitmap,
+            bubble,
+            rect,
+            mode: mining.image as CropMode,
+            word: fields.Word,
+            reading: fields.Reading,
+            sentenceHtml: fields.Sentence,
+            deck: mining.deck
+          });
+          if (!chosen) return false; // cancelled: no card
+          rect = chosen;
+        }
+        const data = await encodeCrop(bitmap, rect);
         note.picture = [
           { filename: `manga_${Date.now()}_${input.token.w}.jpg`, data, fields: ['Picture'] }
         ];
       } catch (e) {
         console.warn('image crop failed, adding the card without a picture', e);
+      } finally {
+        bitmap?.close();
+        if (imageUrl) URL.revokeObjectURL(imageUrl);
       }
     }
     const result = await ankiConnect('addNote', { note }, { silent: true });

@@ -156,6 +156,16 @@
       >
         One tap: create the card directly (no editor)
       </Toggle>
+      <Toggle
+        checked={fam.mining.preview !== false}
+        onchange={() =>
+          updateFamiliaritySetting('mining', {
+            ...fam.mining,
+            preview: fam.mining.preview === false
+          })}
+      >
+        Preview the card image first (adjust, then add)
+      </Toggle>
       <label class="flex items-center justify-between gap-2 text-sm">
         Deck
         <input
