@@ -65,7 +65,7 @@ interface SeriesQueueStatus {
   downloadingCount: number;
 }
 
-interface DecompressedEntry {
+export interface DecompressedEntry {
   filename: string;
   data: ArrayBuffer;
   /**
@@ -429,7 +429,9 @@ export async function processVolumeData(
    * Undefined when nothing measured it — the listing's claim is NOT a
    * substitute: it is what the cloud says about a file, not what we received.
    */
-  archiveBytes?: number
+  archiveBytes?: number,
+  /** manga-immersion fork: progressive installs label not-yet-fetched pages "Loading…" */
+  options?: { placeholderLabel?: string }
 ): Promise<void> {
   // Use the original cloud path for basePath to get proper series extraction
   // Falls back to volume_title if cloudPath not available (older placeholders)
@@ -438,6 +440,7 @@ export async function processVolumeData(
 
   // Convert entries to DecompressedVolume format
   const decompressedVolume = await entriesToDecompressedVolume(entries, basePath);
+  if (options?.placeholderLabel) decompressedVolume.placeholderLabel = options.placeholderLabel;
 
   // Use unified import system to process the volume
   // This handles missing pages, image-only volumes, placeholder generation, etc.
@@ -704,7 +707,9 @@ function listedSidecarAttestation(
   return { provider, size, ...(modified !== undefined ? { modified } : {}) };
 }
 
-async function downloadSidecarEntries(placeholder: VolumeMetadata): Promise<DecompressedEntry[]> {
+export async function downloadSidecarEntries(
+  placeholder: VolumeMetadata
+): Promise<DecompressedEntry[]> {
   const provider = unifiedCloudManager.getActiveProvider();
   if (!provider) return [];
 

@@ -23,6 +23,7 @@ import { seriesMetadataMap } from '$lib/metadata/store';
 import { preferredTitleLanguage } from '$lib/settings/settings';
 import { isMetadataOnly } from '$lib/catalog/volume-state';
 import { volumeRowSignature } from '$lib/catalog/volume-row-signature';
+import { mergeStreamOverlay } from '$lib/streaming/overlay';
 
 async function loadCurrentVolumeData(volume: VolumeMetadata): Promise<VolumeData | undefined> {
   let [ocr, files] = await Promise.all([
@@ -66,7 +67,8 @@ async function loadCurrentVolumeData(volume: VolumeMetadata): Promise<VolumeData
   return {
     volume_uuid: volume.volume_uuid,
     pages: ocr.pages,
-    files: files?.files
+    // manga-immersion fork: pages fetched by the progressive loader that are not in IndexedDB yet
+    files: mergeStreamOverlay(volume.volume_uuid, files?.files)
   };
 }
 

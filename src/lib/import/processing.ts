@@ -341,7 +341,12 @@ export function extractVolumeInfo(basePath: string): VolumeInfo {
  * Creates a simple gray image with "File Missing" text
  * Falls back to a minimal placeholder if canvas isn't available (e.g., in tests)
  */
-function generatePlaceholderImage(filename: string, width = 800, height = 1200): File {
+function generatePlaceholderImage(
+  filename: string,
+  width = 800,
+  height = 1200,
+  label = 'File Missing'
+): File {
   const outputFilename = filename.split('/').pop() || 'missing.png';
 
   // Check if we're in an environment without canvas support (e.g., jsdom tests)
@@ -389,7 +394,7 @@ function generatePlaceholderImage(filename: string, width = 800, height = 1200):
   ctx.fillStyle = '#888';
   ctx.font = 'bold 32px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('File Missing', width / 2, height / 2 + 40);
+  ctx.fillText(label, width / 2, height / 2 + 40);
 
   // Filename text (truncated if too long)
   ctx.font = '16px monospace';
@@ -628,7 +633,12 @@ export async function processVolume(input: DecompressedVolume): Promise<Processe
     const dimensions = pageDimensionsMap.get(missingPath);
     const width = dimensions?.width || 800;
     const height = dimensions?.height || 1200;
-    files[missingPath] = generatePlaceholderImage(missingPath, width, height);
+    files[missingPath] = generatePlaceholderImage(
+      missingPath,
+      width,
+      height,
+      input.placeholderLabel
+    );
   }
 
   // Create mismatch warning if needed

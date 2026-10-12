@@ -216,6 +216,8 @@ export type Settings = {
   ankiConnectSettings: AnkiConnectSettings;
   catalogSettings: CatalogSettings;
   familiarity: FamiliaritySettings;
+  /** manga-immersion fork: open cloud volumes immediately and load pages in the background */
+  streamVolumes: boolean;
   lastUpdated?: string; // ISO 8601 timestamp for sync conflict resolution
   deletedOn?: string; // ISO 8601 timestamp when profile was deleted (tombstone)
 };
@@ -435,7 +437,8 @@ const defaultSettings: Settings = {
     preferredTitleLanguage: 'native',
     pushProgressToAniList: true
   },
-  familiarity: defaultFamiliaritySettings
+  familiarity: defaultFamiliaritySettings,
+  streamVolumes: true
 };
 
 // Mobile-optimized default settings

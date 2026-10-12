@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openCloudVolume } from '$lib/streaming/progressive';
   import type { VolumeMetadata } from '$lib/types';
   import { ListgroupItem, Button, Spinner, Badge } from 'flowbite-svelte';
   import { DownloadSolid, TrashBinSolid } from 'flowbite-svelte-icons';
@@ -69,7 +70,7 @@
 
   function onDownloadClicked(e: Event) {
     e.stopPropagation();
-    downloadQueue.queueVolume(volume);
+    void openCloudVolume(volume);
   }
 
   async function onDeleteClicked(e: Event) {

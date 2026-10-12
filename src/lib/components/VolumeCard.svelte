@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openCloudVolume } from '$lib/streaming/progressive';
   import { nav } from '$lib/util/hash-router';
   import { downloadQueue } from '$lib/util/download-queue';
   import { needsDownload } from '$lib/catalog/volume-state';
@@ -91,7 +92,7 @@
       return;
     }
 
-    downloadQueue.queueVolume(volume!);
+    void openCloudVolume(volume!, seriesId);
   }
 
   /*

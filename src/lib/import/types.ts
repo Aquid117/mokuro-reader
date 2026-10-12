@@ -146,6 +146,8 @@ export interface DecompressedVolume {
    * that file's listing stamp — see `ProcessedMetadata.mokuroCloud`.
    */
   mokuroCloud?: import('$lib/catalog/mokuro-hash').MokuroCloudAttestation;
+  /** manga-immersion fork: text drawn on generated placeholders for missing pages (default "File Missing") */
+  placeholderLabel?: string;
 }
 
 /**

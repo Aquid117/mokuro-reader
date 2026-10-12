@@ -50,6 +50,12 @@
           value: $settings.disableAnimations
         },
         {
+          key: 'streamVolumes',
+          text: 'Stream cloud volumes',
+          value: $settings.streamVolumes,
+          description: 'Open a cloud volume right away; its pages load in the background'
+        },
+        {
           key: 'textBoxContextMenu',
           text: 'Custom text box menu',
           value: $settings.textBoxContextMenu,

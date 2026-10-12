@@ -35,6 +35,7 @@
   import MangaPage from './MangaPage.svelte';
   import TextBoxContextMenu from './TextBoxContextMenu.svelte';
   import FamiliarityPopup from './FamiliarityPopup.svelte';
+  import StreamingBadge from './StreamingBadge.svelte';
   import {
     openCreateModal,
     openUpdateModal,
@@ -1738,6 +1739,7 @@
   {/if}
 
   <FamiliarityPopup />
+  <StreamingBadge />
 
   {#if showContextMenu && contextMenuData}
     <TextBoxContextMenu
