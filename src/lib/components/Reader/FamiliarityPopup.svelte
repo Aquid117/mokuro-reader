@@ -8,6 +8,7 @@
   } from '$lib/familiarity/engine';
   import { familiarityApi } from '$lib/familiarity/api';
   import { setMiningWord, readingToKana } from '$lib/familiarity/mining-context';
+  import { collectTextSegments, sliceRange } from '$lib/familiarity/offsets';
   import { vocabKey, type OverrideState } from '$lib/familiarity/types';
   import { settings } from '$lib/settings';
   import { showSnackbar } from '$lib/util';
@@ -86,20 +87,21 @@
       return;
     }
     if (word.vocab) setMiningWord(word.token, word.vocab, word.text);
-    // Reuse the reader's capture flow: select the word, then fire the double-tap on its text box.
+    // Select the word from its current text nodes (ranges stored at highlight time may be stale after a
+    // re-render), then hand the box to TextBoxes' capture flow via a custom event.
+    const slices = sliceRange(collectTextSegments(word.box), word.token.s, word.token.e);
     const sel = window.getSelection();
     sel?.removeAllRanges();
-    sel?.addRange(word.range.cloneRange());
+    if (slices.length && sel) {
+      const r = document.createRange();
+      r.setStart(slices[0].node, slices[0].start);
+      r.setEnd(slices[slices.length - 1].node, slices[slices.length - 1].end);
+      sel.addRange(r);
+    }
     const box = word.box;
+    const text = word.text;
     close();
-    box.dispatchEvent(
-      new MouseEvent('dblclick', {
-        bubbles: true,
-        cancelable: true,
-        clientX: word.x,
-        clientY: word.y
-      })
-    );
+    box.dispatchEvent(new CustomEvent('jiten:mine', { detail: { text } }));
   }
 </script>
 

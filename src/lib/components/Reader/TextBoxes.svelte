@@ -706,7 +706,25 @@
     }
     applyFamiliaritySettings(fam);
     void highlightPage(familiarityPageKey, els);
-    return () => clearPage(familiarityPageKey);
+    // The Jiten popup mines a word by selecting it and dispatching `jiten:mine` on its text box, which
+    // runs the same capture flow as a double-tap (synthetic dblclick events do not reach Svelte's
+    // delegated handler).
+    const boxes = textBoxes;
+    const offs: (() => void)[] = [];
+    boxEls.forEach((el, index) => {
+      const box = boxes[index];
+      if (!el || !box) return;
+      const handler = (e: Event) => {
+        e.stopPropagation();
+        void onUpdateCard(e, box.lines, box.blockIndex);
+      };
+      el.addEventListener('jiten:mine', handler);
+      offs.push(() => el.removeEventListener('jiten:mine', handler));
+    });
+    return () => {
+      for (const off of offs) off();
+      clearPage(familiarityPageKey);
+    };
   });
 
   function onCopy(event: ClipboardEvent) {
