@@ -15,6 +15,7 @@ import type {
 } from '$lib/settings/settings';
 import { settings, DEFAULT_MODEL_CONFIGS } from '$lib/settings';
 import { showSnackbar } from '$lib/util';
+import { applyJitenTemplateVars, onNoteAdded } from '$lib/familiarity/mining-context';
 import { isMobilePlatform } from '$lib/util/platform';
 import { get } from 'svelte/store';
 
@@ -200,6 +201,9 @@ export function resolveTemplate(
   } else {
     resolved = resolved.replace(/\{existing\}/g, '');
   }
+
+  // manga-immersion fork: {jiten_reading} {jiten_meaning} {jiten_frequency} {jiten_pitch} {jiten_id}
+  resolved = applyJitenTemplateVars(resolved, selectedText);
 
   // Clean up whitespace (but preserve HTML structure)
   // Only collapse multiple spaces, don't trim inside HTML tags
@@ -880,6 +884,7 @@ export async function createCard(
 
   if (result) {
     showSnackbar('Card created!');
+    void onNoteAdded(selectedText, typeof result === 'number' ? result : null);
   } else {
     // If we get here, validation passed but addNote still failed
     showSnackbar('Error: Failed to create card. The note may be a duplicate.');

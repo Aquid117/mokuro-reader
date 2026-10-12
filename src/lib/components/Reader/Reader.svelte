@@ -34,6 +34,7 @@
   import { Input, Popover, Range, Spinner } from 'flowbite-svelte';
   import MangaPage from './MangaPage.svelte';
   import TextBoxContextMenu from './TextBoxContextMenu.svelte';
+  import FamiliarityPopup from './FamiliarityPopup.svelte';
   import {
     openCreateModal,
     openUpdateModal,
@@ -1735,6 +1736,8 @@
       ></button>
     {/if}
   {/if}
+
+  <FamiliarityPopup />
 
   {#if showContextMenu && contextMenuData}
     <TextBoxContextMenu

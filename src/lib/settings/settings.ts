@@ -158,6 +158,8 @@ export type FamiliaritySettings = {
   showMined: boolean;
   /** 0 = off; words with a better (lower) frequency rank than this are never highlighted */
   minFrequencyRank: number;
+  /** tap a highlighted word to open the Jiten word popup (overrides, Add to Anki) */
+  popup: boolean;
 };
 
 export type Settings = {
@@ -232,7 +234,8 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
   intensity: 0.25,
   onlyUnknown: false,
   showMined: true,
-  minFrequencyRank: 0
+  minFrequencyRank: 0,
+  popup: true
 };
 
 export type TimeScheduleKey = keyof TimeSchedule;
@@ -274,6 +277,35 @@ function migrateOldAnkiModelConfig(oldSettings: Record<string, any>): Record<str
 
 // Default configurations for common Anki note types
 export const DEFAULT_MODEL_CONFIGS: Record<string, Omit<ModelConfig, 'modelName'>> = {
+  // manga-immersion fork: the mining note type used with the Jiten popup (reading/meaning/frequency/
+  // pitch/JMDictID are filled from Jiten data when a word is mined from the popup; empty otherwise).
+  'Mining (Kaishi 1.5k)': {
+    deckName: '4 Mining',
+    tags: 'mokuro {series}',
+    fieldMappings: [
+      { fieldName: 'Word', template: '{selection}' },
+      { fieldName: 'Word Reading', template: '{jiten_reading}' },
+      { fieldName: 'Word Meaning', template: '{jiten_meaning}' },
+      { fieldName: 'Word Meaning Core', template: '' },
+      { fieldName: 'Word Furigana', template: '' },
+      { fieldName: 'Word Audio', template: '' },
+      { fieldName: 'Sentence', template: '{sentence}' },
+      { fieldName: 'Sentence Meaning', template: '' },
+      { fieldName: 'Sentence Furigana', template: '' },
+      { fieldName: 'Sentence Audio', template: '' },
+      { fieldName: 'Notes', template: '' },
+      { fieldName: 'Pitch Accent', template: '{jiten_pitch}' },
+      { fieldName: 'Pitch Accent Notes', template: '' },
+      { fieldName: 'Frequency', template: '{jiten_frequency}' },
+      { fieldName: 'Picture', template: '{image}' },
+      { fieldName: 'PitchAccent Manabi', template: '' },
+      { fieldName: 'Sentence Manabi', template: '' },
+      { fieldName: 'Sentence Translation Manabi', template: '' },
+      { fieldName: 'SourceTitle', template: '{series} {volume} p{page_num}' },
+      { fieldName: 'SourceURL', template: '' },
+      { fieldName: 'JMDictID', template: '{jiten_id}' }
+    ]
+  },
   Basic: {
     deckName: 'Default',
     fieldMappings: [

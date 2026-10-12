@@ -33,6 +33,18 @@ type HighlightName = (typeof HIGHLIGHT_NAMES)[number];
 export const familiarityWarning = writable<string | null>(null);
 export const familiarityBusy = writable(false);
 
+export interface PopupWord {
+  token: ParsedToken;
+  vocab: VocabEntry | undefined;
+  text: string;
+  range: Range;
+  box: HTMLElement;
+  x: number;
+  y: number;
+}
+/** The word under the last tap on a highlighted token (drives FamiliarityPopup). */
+export const popupWord = writable<PopupWord | null>(null);
+
 export function highlightsSupported(): boolean {
   return typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined';
 }
@@ -204,22 +216,69 @@ function rebuildRegistry(): void {
 /** Find the token under a client point (for the word popup). */
 export function tokenAtPoint(
   x: number,
-  y: number
-): { token: ParsedToken; vocab: VocabEntry | undefined; text: string } | null {
+  y: number,
+  slop = 2
+): { token: ParsedToken; vocab: VocabEntry | undefined; text: string; range: Range } | null {
   for (const p of pages.values()) {
     for (const h of p.hits) {
       for (const rect of Array.from(h.range.getClientRects())) {
-        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        if (
+          x >= rect.left - slop &&
+          x <= rect.right + slop &&
+          y >= rect.top - slop &&
+          y <= rect.bottom + slop
+        ) {
           return {
             token: h.token,
             vocab: vocab.get(vocabKey(h.token.w, h.token.r)),
-            text: h.range.toString()
+            text: h.range.toString(),
+            range: h.range
           };
         }
       }
     }
   }
   return null;
+}
+
+/** First token on any mounted page whose rendered text equals `text` (maps a captured selection to a word). */
+export function findHitByText(
+  text: string
+): { token: ParsedToken; vocab: VocabEntry | undefined } | null {
+  for (const p of pages.values()) {
+    for (const h of p.hits) {
+      if (h.range.toString() === text)
+        return { token: h.token, vocab: vocab.get(vocabKey(h.token.w, h.token.r)) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Tap-to-popup: a plain click/tap on a highlighted word (no text selection in progress, not on the popup
+ * itself) opens the word popup; a tap anywhere else closes it. Installed by FamiliarityPopup.
+ */
+export function installTapHandler(): () => void {
+  const onClick = (e: MouseEvent) => {
+    if (!currentSettings?.enabled || currentSettings.popup === false) return;
+    const target = e.target as Element | null;
+    if (!target || target.closest('[data-jiten-popup]')) return;
+    const box = target.closest('.textBox') as HTMLElement | null;
+    if (!box) {
+      popupWord.set(null);
+      return;
+    }
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return; // the user is selecting text (dictionary extensions)
+    const hit = tokenAtPoint(e.clientX, e.clientY);
+    if (!hit) {
+      popupWord.set(null);
+      return;
+    }
+    popupWord.set({ ...hit, box, x: e.clientX, y: e.clientY });
+  };
+  document.addEventListener('click', onClick, true);
+  return () => document.removeEventListener('click', onClick, true);
 }
 
 export function currentWarning(): string | null {
