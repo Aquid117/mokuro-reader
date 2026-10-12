@@ -41,7 +41,11 @@ async function repair(uuid: string): Promise<void> {
 
 if (typeof window !== 'undefined') {
   currentVolume.subscribe((v) => {
-    if (!v || v.volume_uuid === lastUuid) return;
+    if (!v) {
+      lastUuid = undefined; // left the reader: the next open of any volume is checked again
+      return;
+    }
+    if (v.volume_uuid === lastUuid) return;
     lastUuid = v.volume_uuid;
     if (!hasPendingStream(v.volume_uuid)) return;
     if (streamingEnabled()) resumeIfPending(v);
