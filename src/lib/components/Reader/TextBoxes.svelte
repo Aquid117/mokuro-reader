@@ -511,10 +511,17 @@
     return selection?.toString().trim() || '';
   }
 
-  async function onUpdateCard(event: Event, lines: string[], blockIndex: number) {
+  async function onUpdateCard(
+    event: Event,
+    lines: string[],
+    blockIndex: number,
+    selectedOverride?: string
+  ) {
     if (!$settings.ankiConnectSettings.enabled) return;
 
-    const selectedText = getSelectedText();
+    // Selection.toString() is empty for text that is not currently rendered (hidden OCR), so the Jiten
+    // popup passes the word explicitly.
+    const selectedText = selectedOverride ?? getSelectedText();
     const fullSentence = lines.join(' ');
 
     // Get the original block's bounding box for initial crop
@@ -716,7 +723,8 @@
       if (!el || !box) return;
       const handler = (e: Event) => {
         e.stopPropagation();
-        void onUpdateCard(e, box.lines, box.blockIndex);
+        const text = (e as CustomEvent<{ text?: string }>).detail?.text;
+        void onUpdateCard(e, box.lines, box.blockIndex, text || undefined);
       };
       el.addEventListener('jiten:mine', handler);
       offs.push(() => el.removeEventListener('jiten:mine', handler));
