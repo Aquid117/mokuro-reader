@@ -100,8 +100,10 @@
     }
     const box = word.box;
     const text = word.text;
+    const token = word.token;
+    const vocab = word.vocab;
     close();
-    box.dispatchEvent(new CustomEvent('jiten:mine', { detail: { text } }));
+    box.dispatchEvent(new CustomEvent('jiten:mine', { detail: { text, token, vocab } }));
   }
 </script>
 

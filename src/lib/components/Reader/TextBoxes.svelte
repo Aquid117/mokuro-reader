@@ -30,6 +30,9 @@
     clearPage,
     applySettings as applyFamiliaritySettings
   } from '$lib/familiarity';
+  import { quickMine } from '$lib/familiarity/quick-mine';
+  import { collectTextSegments, blockText as joinBlockText } from '$lib/familiarity/offsets';
+  import type { ParsedToken, VocabEntry } from '$lib/familiarity/types';
 
   interface ContextMenuData {
     x: number;
@@ -723,8 +726,14 @@
       if (!el || !box) return;
       const handler = (e: Event) => {
         e.stopPropagation();
-        const text = (e as CustomEvent<{ text?: string }>).detail?.text;
-        void onUpdateCard(e, box.lines, box.blockIndex, text || undefined);
+        const detail =
+          (e as CustomEvent<{ text?: string; token?: ParsedToken; vocab?: VocabEntry }>).detail ??
+          {};
+        if ($settings.familiarity?.mining?.oneTap && detail.token) {
+          void mineOneTap(el, box.blockIndex, detail.token, detail.vocab, detail.text ?? '');
+        } else {
+          void onUpdateCard(e, box.lines, box.blockIndex, detail.text || undefined);
+        }
       };
       el.addEventListener('jiten:mine', handler);
       offs.push(() => el.removeEventListener('jiten:mine', handler));
@@ -734,6 +743,38 @@
       clearPage(familiarityPageKey);
     };
   });
+
+  async function mineOneTap(
+    el: HTMLElement,
+    blockIndex: number,
+    token: ParsedToken,
+    vocab: VocabEntry | undefined,
+    surface: string
+  ) {
+    const block = page.blocks[blockIndex];
+    if (!block) return;
+    let imageBlob: Blob | null = src ?? null;
+    if (!imageBlob) {
+      const url = getImageUrlFromElement(el);
+      if (url)
+        imageBlob = await fetch(url)
+          .then((r) => r.blob())
+          .catch(() => null);
+    }
+    const pageNumber = pageIndex != null ? pageIndex + 1 : $volumes[volumeUuid]?.progress || 1;
+    await quickMine({
+      token,
+      vocab,
+      surface,
+      blockText: joinBlockText(collectTextSegments(el)),
+      imageBlob,
+      bubble: block.box as [number, number, number, number],
+      pageSize: { width: page.img_width, height: page.img_height },
+      pageNumber,
+      seriesTitle: volumeMetadata.seriesTitle,
+      volumeTitle: volumeMetadata.volumeTitle
+    });
+  }
 
   function onCopy(event: ClipboardEvent) {
     // Strip line breaks from copied text (Ctrl+C default behavior)

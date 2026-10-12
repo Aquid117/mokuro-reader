@@ -124,6 +124,57 @@
       <Helper>0 = off. Example: 500 hides highlights on the 500 most frequent words.</Helper>
     </div>
 
+    <div class="flex flex-col gap-2 rounded border border-gray-300 p-2 dark:border-gray-600">
+      <Label>Mining from the word popup</Label>
+      <Toggle
+        checked={fam.mining.oneTap}
+        onchange={() =>
+          updateFamiliaritySetting('mining', { ...fam.mining, oneTap: !fam.mining.oneTap })}
+      >
+        One tap: create the card directly (no editor)
+      </Toggle>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        Deck
+        <input
+          class="w-48 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={fam.mining.deck}
+          onchange={(e) =>
+            updateFamiliaritySetting('mining', {
+              ...fam.mining,
+              deck: (e.target as HTMLInputElement).value.trim() || 'Manga Mining'
+            })}
+        />
+      </label>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        Note type
+        <input
+          class="w-48 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={fam.mining.model}
+          onchange={(e) =>
+            updateFamiliaritySetting('mining', {
+              ...fam.mining,
+              model: (e.target as HTMLInputElement).value.trim() || 'Manga Mining'
+            })}
+        />
+      </label>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        Card image
+        <select
+          class="w-48 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={fam.mining.image}
+          onchange={(e) =>
+            updateFamiliaritySetting('mining', {
+              ...fam.mining,
+              image: (e.target as HTMLSelectElement).value as 'panel' | 'bubble' | 'page'
+            })}
+        >
+          <option value="panel">Panel around the bubble</option>
+          <option value="bubble">Just the speech bubble</option>
+          <option value="page">Full page</option>
+        </select>
+      </label>
+    </div>
+
     <div class="grid grid-cols-2 gap-2">
       {#each states as st (st.key)}
         <label class="flex items-center gap-2 text-sm">
