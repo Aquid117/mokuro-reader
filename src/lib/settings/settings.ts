@@ -143,6 +143,23 @@ export type CatalogSettings = {
   pushProgressToAniList: boolean;
 };
 
+/** Jiten familiarity highlighting (manga-immersion fork). Synced with the profile. */
+export type FamiliaritySettings = {
+  enabled: boolean;
+  /** text colours per state */
+  colors: { new: string; young: string; due: string; learning: string; mined: string };
+  /** also tint the background behind the word */
+  background: boolean;
+  /** background tint alpha 0..1 */
+  intensity: number;
+  /** highlight only unknown (new) words, hide young/due/learning */
+  onlyUnknown: boolean;
+  /** underline words that already have an Anki card */
+  showMined: boolean;
+  /** 0 = off; words with a better (lower) frequency rank than this are never highlighted */
+  minFrequencyRank: number;
+};
+
 export type Settings = {
   defaultFullscreen: boolean;
   textBoxBorders: boolean;
@@ -187,6 +204,7 @@ export type Settings = {
   volumeDefaults: VolumeDefaults;
   ankiConnectSettings: AnkiConnectSettings;
   catalogSettings: CatalogSettings;
+  familiarity: FamiliaritySettings;
   lastUpdated?: string; // ISO 8601 timestamp for sync conflict resolution
   deletedOn?: string; // ISO 8601 timestamp when profile was deleted (tombstone)
 };
@@ -198,6 +216,24 @@ export type AnkiSettingsKey = keyof AnkiConnectSettings;
 export type VolumeDefaultsKey = keyof VolumeDefaults;
 
 export type CatalogSettingsKey = keyof CatalogSettings;
+
+export type FamiliaritySettingsKey = keyof FamiliaritySettings;
+
+export const defaultFamiliaritySettings: FamiliaritySettings = {
+  enabled: false,
+  colors: {
+    new: '#a855f7',
+    young: '#f59e0b',
+    due: '#ef4444',
+    learning: '#f59e0b',
+    mined: '#22c55e'
+  },
+  background: false,
+  intensity: 0.25,
+  onlyUnknown: false,
+  showMined: true,
+  minFrequencyRank: 0
+};
 
 export type TimeScheduleKey = keyof TimeSchedule;
 
@@ -364,7 +400,8 @@ const defaultSettings: Settings = {
     dropShadow: true,
     preferredTitleLanguage: 'native',
     pushProgressToAniList: true
-  }
+  },
+  familiarity: defaultFamiliaritySettings
 };
 
 // Mobile-optimized default settings
@@ -418,6 +455,11 @@ export function migrateProfiles(profiles: Profiles): Profiles {
     migratedProfile.volumeDefaults = {
       ...defaultSettings.volumeDefaults,
       ...(profile.volumeDefaults || {})
+    };
+    migratedProfile.familiarity = {
+      ...defaultFamiliaritySettings,
+      ...(profile.familiarity || {}),
+      colors: { ...defaultFamiliaritySettings.colors, ...(profile.familiarity?.colors || {}) }
     };
 
     // Validate singlePageView at top level: convert legacy boolean to 'auto', or use default for any invalid value
@@ -720,6 +762,14 @@ function touchProfile(profile: Settings): Settings {
     ...profile,
     lastUpdated: new Date().toISOString()
   };
+}
+
+export function updateFamiliaritySetting<K extends FamiliaritySettingsKey>(
+  key: K,
+  value: FamiliaritySettings[K]
+) {
+  const current = get(settings).familiarity ?? defaultFamiliaritySettings;
+  updateSetting('familiarity', { ...current, [key]: value });
 }
 
 export function updateSetting(key: SettingsKey, value: any) {

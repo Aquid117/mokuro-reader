@@ -6,6 +6,7 @@
   import { isReader, promptConfirmation } from '$lib/util';
   import { currentView } from '$lib/util/hash-router';
   import AnkiConnectSettings from './AnkiConnectSettings.svelte';
+  import FamiliaritySettings from './FamiliaritySettings.svelte';
   import ReaderSettings from './Reader/ReaderSettings.svelte';
   import Profiles from './Profiles/Profiles.svelte';
   import CatalogSettings from './CatalogSettings.svelte';
@@ -93,6 +94,7 @@
       {/if}
       <Profiles {onClose} />
       <AnkiConnectSettings />
+      <FamiliaritySettings />
       <CatalogSettings />
       <MetadataSettings />
       <AppearanceSettings />

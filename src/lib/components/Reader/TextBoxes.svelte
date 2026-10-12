@@ -25,6 +25,11 @@
   import { lineTransform } from '$lib/reader/line-grid';
   import { fontsReady, fontLoadEpoch } from '$lib/reader/fonts-ready';
   import { dedupeBlocks } from '$lib/reader/block-dedupe';
+  import {
+    highlightPage,
+    clearPage,
+    applySettings as applyFamiliaritySettings
+  } from '$lib/familiarity';
 
   interface ContextMenuData {
     x: number;
@@ -684,6 +689,26 @@
     }
   }
 
+  // Familiarity highlighting (manga-immersion fork): after every render of the text boxes, hand the
+  // DOM nodes to the engine, which paints words with CSS Custom Highlights. No markup is added, so
+  // dictionary extensions, selection and gestures are untouched. Re-runs on page/OCR/font changes
+  // because the effect reads textBoxes, the element refs and the epoch.
+  let boxEls = $state<HTMLDivElement[]>([]);
+  const familiarityPageKey = `${volumeUuid}:${pageIndex ?? 'p'}`;
+  $effect(() => {
+    const fam = $settings.familiarity;
+    const els = boxEls.filter((el): el is HTMLDivElement => !!el && el.isConnected);
+    void textBoxes;
+    void fontEpoch;
+    if (!fam?.enabled || display !== 'block') {
+      clearPage(familiarityPageKey);
+      return;
+    }
+    applyFamiliaritySettings(fam);
+    void highlightPage(familiarityPageKey, els);
+    return () => clearPage(familiarityPageKey);
+  });
+
   function onCopy(event: ClipboardEvent) {
     // Strip line breaks from copied text (Ctrl+C default behavior)
     const selection = window.getSelection()?.toString() || '';
@@ -696,6 +721,7 @@
 {#each textBoxes as { fontSize, height, left, lines, top, width, writingMode, useMinDimensions, isOriginalMode, lineLayouts, layoutSignature, blockIndex }, index (`${volumeUuid}-textBox-${index}`)}
   {@const usePerLine = lineLayouts !== null}
   <div
+    bind:this={boxEls[index]}
     use:handleTextBoxHover={[index, fontSize]}
     use:positionPerLine={`${display}|${$settings.fontSize}|${layoutSignature}|${fontEpoch}`}
     class="textBox"

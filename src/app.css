@@ -149,3 +149,28 @@ input[type='radio']:checked::after {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* --- Jiten familiarity highlighting (manga-immersion fork) ---------------------------------
+   Painted with the CSS Custom Highlight API from src/lib/familiarity/engine.ts: no extra DOM
+   inside the OCR text boxes. Colours come from the profile (FamiliaritySettings). */
+::highlight(jiten-new) {
+  color: var(--jiten-new, #a855f7);
+  background-color: var(--jiten-new-bg, transparent);
+}
+::highlight(jiten-young) {
+  color: var(--jiten-young, #f59e0b);
+  background-color: var(--jiten-young-bg, transparent);
+}
+::highlight(jiten-due) {
+  color: var(--jiten-due, #ef4444);
+  background-color: var(--jiten-due-bg, transparent);
+}
+::highlight(jiten-learning) {
+  color: var(--jiten-learning, #f59e0b);
+  background-color: var(--jiten-learning-bg, transparent);
+}
+::highlight(jiten-mined) {
+  text-decoration: underline dotted var(--jiten-mined, #22c55e);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
