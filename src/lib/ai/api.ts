@@ -57,12 +57,39 @@ export interface AiStatus {
   today: { requests: number; inputTokens: number; outputTokens: number };
 }
 
+export interface AiHistoryItem {
+  explanationId: string;
+  text: string;
+  translation: string;
+  provider: AiProviderId;
+  model: string;
+  withImage: boolean;
+  context: {
+    text: string;
+    before: string[];
+    after: string[];
+    series?: string;
+    volume?: string;
+    page?: number;
+    focusWord?: string;
+  };
+  seriesId: string | null;
+  volumeId: string | null;
+  followUps: number;
+  createdAt: number;
+  lastAt: number;
+}
+
 export interface AiChoice {
   provider?: AiProviderId;
   quality?: AiQuality;
 }
 
-async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+async function request<T>(
+  method: 'GET' | 'POST' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: body === undefined ? undefined : { 'content-type': 'application/json' },
@@ -86,7 +113,19 @@ export const aiApi = {
   status: () => request<AiStatus>('GET', '/api/ai/status'),
   explain: (ctx: ExplainContext & AiChoice & { image?: string; fresh?: boolean }) =>
     request<ExplainResult>('POST', '/api/ai/explain', ctx),
-  get: (id: string) => request<ExplainResult>('GET', `/api/ai/explain/${id}`)
+  get: (id: string) => request<ExplainResult>('GET', `/api/ai/explain/${id}`),
+  history: (opts: { before?: number | null; q?: string; limit?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (opts.before) p.set('before', String(opts.before));
+    if (opts.q?.trim()) p.set('q', opts.q.trim());
+    if (opts.limit) p.set('limit', String(opts.limit));
+    const qs = p.toString();
+    return request<{ items: AiHistoryItem[]; next: number | null }>(
+      'GET',
+      `/api/ai/history${qs ? `?${qs}` : ''}`
+    );
+  },
+  forget: (id: string) => request<{ ok: boolean }>('DELETE', `/api/ai/history/${id}`)
 };
 
 export interface SseEvent {

@@ -15,7 +15,7 @@
   import { settings } from '$lib/settings';
   import { showSnackbar } from '$lib/util';
   import { onMount } from 'svelte';
-  import { textBoxPickerStore } from './text-box-picker';
+  import { textBoxPickerStore, type PickerPage } from './text-box-picker';
   import { contextFromPage } from '$lib/ai/context';
   import { openExplain, aiStatus, aiAvailable } from '$lib/ai/store';
 
@@ -26,6 +26,19 @@
   let tags = $state<string | undefined>(undefined);
   let metadata = $state<VolumeMetadata | undefined>(undefined);
   let purpose = $state<'anki' | 'explain'>('anki');
+  // dual-page view: both pages, switchable inside the picker (one + menu button instead of two)
+  let choices = $state<PickerPage[]>([]);
+  let choiceIndex = $state(0);
+
+  function selectChoice(i: number) {
+    const c = choices[i];
+    if (!c) return;
+    choiceIndex = i;
+    image = c.image;
+    page = c.page;
+    pageNumber = c.pageNumber;
+    selectedBlockIndex = null;
+  }
   let canExplain = $derived(aiAvailable($aiStatus, $settings.ai?.enabled));
 
   // Track which block is currently selected (for highlighting)
@@ -75,6 +88,14 @@
       tags = value.tags;
       metadata = value.metadata;
       purpose = value.purpose ?? 'anki';
+      choices =
+        value.open && value.image && value.page
+          ? [
+              { image: value.image, page: value.page, pageNumber: value.pageNumber },
+              ...(value.alt ? [value.alt] : [])
+            ]
+          : [];
+      choiceIndex = 0;
 
       if (value.open) {
         selectedBlockIndex = null;
@@ -268,6 +289,22 @@
           {/each}
         </div>
       </div>
+      {#if choices.length > 1}
+        <div class="flex justify-center">
+          <div class="flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+            {#each choices as c, i (i)}
+              <button
+                type="button"
+                class="px-4 py-1.5 text-sm {choiceIndex === i
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700'}"
+                onclick={() => selectChoice(i)}
+                >{c.pageNumber ? `Page ${c.pageNumber}` : `Page ${i + 1}`}</button
+              >
+            {/each}
+          </div>
+        </div>
+      {/if}
       <Helper class="text-center">Click a text box on the image to select it</Helper>
 
       <div class="relative z-10 flex justify-end gap-2">

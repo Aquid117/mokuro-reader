@@ -11,6 +11,14 @@ interface TextBoxPickerState {
   metadata?: VolumeMetadata;
   /** manga-immersion fork: 'explain' opens the AI explanation instead of the Anki flow */
   purpose?: 'anki' | 'explain';
+  /** manga-immersion fork: the other page in dual-page view (the picker offers a page switch) */
+  alt?: PickerPage;
+}
+
+export interface PickerPage {
+  image: string;
+  page: Page;
+  pageNumber?: number;
 }
 
 export const textBoxPickerStore = writable<TextBoxPickerState>({ open: false });
@@ -21,7 +29,8 @@ export function showTextBoxPicker(
   tags?: string,
   metadata?: VolumeMetadata,
   pageNumber?: number,
-  purpose: 'anki' | 'explain' = 'anki'
+  purpose: 'anki' | 'explain' = 'anki',
+  alt?: PickerPage
 ) {
-  textBoxPickerStore.set({ open: true, image, page, pageNumber, tags, metadata, purpose });
+  textBoxPickerStore.set({ open: true, image, page, pageNumber, tags, metadata, purpose, alt });
 }

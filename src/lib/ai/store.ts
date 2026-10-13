@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { settings } from '$lib/settings';
+import { currentView } from '$lib/util/hash-router';
 import { cropRect, encodeCrop, bubbleInBitmap } from '$lib/familiarity/panel-crop';
 import {
   aiApi,
@@ -113,6 +114,11 @@ async function run(fresh: boolean): Promise<void> {
 
 export function openExplain(ctx: ExplainContext, imageSource: ImageSource | null = null): void {
   if (!ctx.text) return;
+  // remember where the bubble came from, for the history's "open volume" link
+  const view = get(currentView);
+  if (view.type === 'reader' && !ctx.volumeId) {
+    ctx = { ...ctx, seriesId: view.seriesId, volumeId: view.volumeId };
+  }
   const includeImage = get(settings).ai?.includeImage ?? false;
   aiPanel.set({
     ...closed,
@@ -143,6 +149,27 @@ export function reExplain(
     };
   });
   void run(opts.fresh ?? true);
+}
+
+/** Reopens a stored explanation (history) in the panel without a new request. */
+export async function openStoredExplanation(ctx: ExplainContext, id: string): Promise<void> {
+  const myRun = ++runId;
+  aiPanel.set({
+    ...closed,
+    open: true,
+    ctx,
+    quality: get(settings).ai?.quality ?? 'fast',
+    loading: true,
+    startedAt: Date.now()
+  });
+  try {
+    const result = await aiApi.get(id);
+    if (myRun !== runId) return;
+    aiPanel.update((p) => ({ ...p, loading: false, result }));
+  } catch (e) {
+    if (myRun !== runId) return;
+    aiPanel.update((p) => ({ ...p, loading: false, error: (e as Error).message }));
+  }
 }
 
 export async function ask(question: string): Promise<void> {

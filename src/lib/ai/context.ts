@@ -10,6 +10,9 @@ export interface ExplainContext {
   volume?: string;
   page?: number;
   focusWord?: string;
+  /** reader route ids, stored with the history entry for its "open volume" link */
+  seriesId?: string;
+  volumeId?: string;
 }
 
 /** Page image + bubble box, used to attach the panel image when the user asks for it. */
