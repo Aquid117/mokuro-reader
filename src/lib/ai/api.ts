@@ -28,19 +28,38 @@ export interface AiMessage {
   ts: number;
 }
 
+export type AiProviderId = 'codex' | 'gemini' | 'openai';
+export type AiQuality = 'fast' | 'thorough';
+
 export interface ExplainResult {
   id: string;
   text: string;
   explanation: ExplanationData;
   cached: boolean;
+  provider: AiProviderId;
+  model: string;
   messages: AiMessage[];
+}
+
+export interface AiProviderInfo {
+  id: AiProviderId;
+  label: string;
+  billing: 'subscription' | 'pay-per-use';
+  configured: boolean;
+  models: Record<AiQuality, string>;
 }
 
 export interface AiStatus {
   configured: boolean;
-  model: string;
+  defaultProvider: AiProviderId;
+  providers: AiProviderInfo[];
   dailyLimit: number;
   today: { requests: number; inputTokens: number; outputTokens: number };
+}
+
+export interface AiChoice {
+  provider?: AiProviderId;
+  quality?: AiQuality;
 }
 
 async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
@@ -65,7 +84,7 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown):
 
 export const aiApi = {
   status: () => request<AiStatus>('GET', '/api/ai/status'),
-  explain: (ctx: ExplainContext & { image?: string; fresh?: boolean }) =>
+  explain: (ctx: ExplainContext & AiChoice & { image?: string; fresh?: boolean }) =>
     request<ExplainResult>('POST', '/api/ai/explain', ctx),
   get: (id: string) => request<ExplainResult>('GET', `/api/ai/explain/${id}`)
 };
@@ -111,12 +130,13 @@ export async function readSse(
 export async function askFollowup(
   id: string,
   question: string,
-  onDelta: (d: string) => void
+  onDelta: (d: string) => void,
+  choice: AiChoice = {}
 ): Promise<void> {
   const res = await fetch(`/api/ai/explain/${id}/ask`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, ...choice }),
     credentials: 'same-origin',
     redirect: 'manual'
   });

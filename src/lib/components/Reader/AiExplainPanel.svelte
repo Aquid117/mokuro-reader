@@ -13,6 +13,22 @@
   let p = $derived($aiPanel);
   let ex = $derived<ExplanationData | null>(p.result?.explanation ?? null);
 
+  const providerNames: Record<string, string> = {
+    codex: 'ChatGPT',
+    gemini: 'Gemini',
+    openai: 'OpenAI API'
+  };
+
+  // elapsed seconds while waiting (Codex answers take ~10 s, in-depth ~40 s)
+  let now = $state(Date.now());
+  $effect(() => {
+    if (!p.loading && !p.asking) return;
+    now = Date.now();
+    const t = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(t);
+  });
+  let elapsed = $derived(Math.max(0, Math.round((now - p.startedAt) / 1000)));
+
   function sentenceParts(text: string, focus?: string): { t: string; focus: boolean }[] {
     if (!focus || !text.includes(focus)) return [{ t: text, focus: false }];
     const i = text.indexOf(focus);
@@ -101,6 +117,16 @@
         >
       {/if}
       <button
+        class="rounded px-2 py-1 disabled:opacity-50 {p.quality === 'thorough'
+          ? 'bg-primary-700 text-white'
+          : 'bg-gray-700 hover:bg-gray-600'}"
+        disabled={p.loading}
+        onclick={() =>
+          reExplain({ quality: p.quality === 'thorough' ? 'fast' : 'thorough', fresh: false })}
+        title="Use the slower, more thorough model"
+        >{p.quality === 'thorough' ? 'In depth ✓' : 'In depth'}</button
+      >
+      <button
         class="rounded bg-gray-700 px-2 py-1 hover:bg-gray-600 disabled:opacity-50"
         disabled={p.loading}
         onclick={() => reExplain({ fresh: true })}>Re-explain</button
@@ -110,15 +136,22 @@
         disabled={!ex}
         onclick={copy}>Copy</button
       >
-      {#if p.result?.cached && !p.loading}
-        <span class="self-center text-gray-500">saved</span>
+      {#if p.result && !p.loading}
+        <span class="self-center text-gray-500"
+          >{providerNames[p.result.provider] ?? p.result.provider} · {p.result.model}{p.result
+            .cached
+            ? ' · saved'
+            : ''}</span
+        >
       {/if}
     </div>
 
     <div bind:this={scroller} class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3 text-sm">
       {#if p.loading}
         <div class="space-y-2" aria-busy="true">
-          <div class="text-gray-400">Asking the tutor…</div>
+          <div class="text-gray-400">
+            Asking the tutor… {elapsed > 0 ? `${elapsed} s` : ''}
+          </div>
           <div class="h-4 w-4/5 animate-pulse rounded bg-gray-700"></div>
           <div class="h-4 w-3/5 animate-pulse rounded bg-gray-700"></div>
           <div class="h-16 w-full animate-pulse rounded bg-gray-800"></div>
@@ -221,7 +254,7 @@
                 <!-- eslint-disable-next-line svelte/no-at-html-tags -- renderMarkdown escapes HTML -->
                 <div class="ai-md leading-snug">{@html renderMarkdown(p.streaming)}</div>
               {:else if p.asking}
-                <div class="text-gray-400">Thinking…</div>
+                <div class="text-gray-400">Thinking… {elapsed > 0 ? `${elapsed} s` : ''}</div>
               {/if}
             {/if}
           </section>

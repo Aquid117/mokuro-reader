@@ -1,7 +1,14 @@
 import { writable, get } from 'svelte/store';
 import { settings } from '$lib/settings';
 import { cropRect, encodeCrop, bubbleInBitmap } from '$lib/familiarity/panel-crop';
-import { aiApi, askFollowup, type AiStatus, type ExplainResult } from './api';
+import {
+  aiApi,
+  askFollowup,
+  type AiChoice,
+  type AiQuality,
+  type AiStatus,
+  type ExplainResult
+} from './api';
 import type { ExplainContext, ImageSource } from './context';
 
 /** State of the AI explanation panel (manga-immersion fork). */
@@ -10,7 +17,10 @@ export interface AiPanelState {
   ctx: ExplainContext | null;
   imageSource: ImageSource | null;
   withImage: boolean;
+  quality: AiQuality;
   loading: boolean;
+  /** when the current request started (for the elapsed-seconds display) */
+  startedAt: number;
   error: string | null;
   result: ExplainResult | null;
   asking: boolean;
@@ -24,7 +34,9 @@ const closed: AiPanelState = {
   ctx: null,
   imageSource: null,
   withImage: false,
+  quality: 'fast',
   loading: false,
+  startedAt: 0,
   error: null,
   result: null,
   asking: false,
@@ -64,11 +76,22 @@ async function panelImage(src: ImageSource): Promise<string> {
 
 let runId = 0;
 
+function choice(quality: AiQuality): AiChoice {
+  const provider = get(settings).ai?.provider;
+  return { provider: provider && provider !== 'auto' ? provider : undefined, quality };
+}
+
 async function run(fresh: boolean): Promise<void> {
   const s = get(aiPanel);
   if (!s.ctx) return;
   const id = ++runId;
-  aiPanel.update((p) => ({ ...p, loading: true, error: null, askError: null }));
+  aiPanel.update((p) => ({
+    ...p,
+    loading: true,
+    startedAt: Date.now(),
+    error: null,
+    askError: null
+  }));
   try {
     let image: string | undefined;
     if (s.withImage && s.imageSource) {
@@ -78,7 +101,7 @@ async function run(fresh: boolean): Promise<void> {
         image = undefined; // explain without the image rather than failing
       }
     }
-    const result = await aiApi.explain({ ...s.ctx, image, fresh });
+    const result = await aiApi.explain({ ...s.ctx, ...choice(s.quality), image, fresh });
     if (id !== runId) return;
     aiPanel.update((p) => ({ ...p, loading: false, result }));
     void refreshAiStatus();
@@ -101,13 +124,24 @@ export function openExplain(ctx: ExplainContext, imageSource: ImageSource | null
   void run(false);
 }
 
-/** Explain again: `fresh` bypasses the cache, `withImage` toggles the panel image. */
-export function reExplain(opts: { withImage?: boolean; fresh?: boolean } = {}): void {
-  aiPanel.update((p) => ({
-    ...p,
-    withImage: opts.withImage ?? p.withImage,
-    result: opts.withImage !== undefined && opts.withImage !== p.withImage ? null : p.result
-  }));
+/**
+ * Explain again: `fresh` bypasses the cache, `withImage` toggles the panel image, `quality` switches to
+ * the in-depth model (or back).
+ */
+export function reExplain(
+  opts: { withImage?: boolean; fresh?: boolean; quality?: AiQuality } = {}
+): void {
+  aiPanel.update((p) => {
+    const changed =
+      (opts.withImage !== undefined && opts.withImage !== p.withImage) ||
+      (opts.quality !== undefined && opts.quality !== p.quality);
+    return {
+      ...p,
+      withImage: opts.withImage ?? p.withImage,
+      quality: opts.quality ?? p.quality,
+      result: changed ? null : p.result
+    };
+  });
   void run(opts.fresh ?? true);
 }
 
@@ -118,13 +152,18 @@ export async function ask(question: string): Promise<void> {
   aiPanel.update((p) => ({
     ...p,
     asking: true,
+    startedAt: Date.now(),
     pendingQuestion: q,
     streaming: '',
     askError: null
   }));
   try {
-    await askFollowup(s.result.id, q, (d) =>
-      aiPanel.update((p) => ({ ...p, streaming: p.streaming + d }))
+    // follow-ups stay with the provider that wrote the explanation
+    await askFollowup(
+      s.result.id,
+      q,
+      (d) => aiPanel.update((p) => ({ ...p, streaming: p.streaming + d })),
+      { provider: s.result.provider, quality: s.quality }
     );
     aiPanel.update((p) => {
       if (!p.result) return p;

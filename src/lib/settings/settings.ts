@@ -178,9 +178,18 @@ export type AiSettings = {
   enabled: boolean;
   /** attach the panel image around the bubble by default */
   includeImage: boolean;
+  /** backend provider; 'auto' = the server's default */
+  provider: 'auto' | 'codex' | 'gemini' | 'openai';
+  /** fast model, or the slower in-depth one */
+  quality: 'fast' | 'thorough';
 };
 
-export const defaultAiSettings: AiSettings = { enabled: true, includeImage: false };
+export const defaultAiSettings: AiSettings = {
+  enabled: true,
+  includeImage: false,
+  provider: 'auto',
+  quality: 'fast'
+};
 
 export type Settings = {
   defaultFullscreen: boolean;

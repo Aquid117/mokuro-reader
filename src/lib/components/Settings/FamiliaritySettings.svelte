@@ -248,16 +248,54 @@
       >
         Send the panel image by default (better context, costs more)
       </Toggle>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        Provider
+        <select
+          class="w-56 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={ai.provider}
+          onchange={(e) =>
+            updateSetting('ai', {
+              ...ai,
+              provider: (e.target as HTMLSelectElement).value as typeof ai.provider
+            })}
+        >
+          <option value="auto">Server default</option>
+          {#each $aiStatus?.providers ?? [] as pr (pr.id)}
+            <option value={pr.id} disabled={!pr.configured}
+              >{pr.label}{pr.billing === 'subscription' ? '' : ' (pay per use)'}{pr.configured
+                ? ''
+                : ' (not set up)'}</option
+            >
+          {/each}
+        </select>
+      </label>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        Default depth
+        <select
+          class="w-56 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={ai.quality}
+          onchange={(e) =>
+            updateSetting('ai', {
+              ...ai,
+              quality: (e.target as HTMLSelectElement).value as typeof ai.quality
+            })}
+        >
+          <option value="fast">Fast</option>
+          <option value="thorough">In depth (slower)</option>
+        </select>
+      </label>
       <Helper>
         {#if $aiStatus === null}
           AI status unavailable.
         {:else if !$aiStatus.configured}
-          Not configured: no OpenAI API key on the server.
+          Not configured on the server (see docs/ai-help.md).
         {:else}
-          Model {$aiStatus.model} · today {$aiStatus.today.requests}/{$aiStatus.dailyLimit} requests,
-          {Math.round(($aiStatus.today.inputTokens + $aiStatus.today.outputTokens) / 1000)}k tokens.
-          Only the bubble text, its neighbours, the title and (if chosen) the panel image are sent
-          to OpenAI.
+          {@const def = $aiStatus.providers.find(
+            (pr) => pr.id === (ai.provider === 'auto' ? $aiStatus.defaultProvider : ai.provider)
+          )}
+          {#if def}Models: {def.models.fast} (fast), {def.models.thorough} (in depth).{/if}
+          Today {$aiStatus.today.requests}/{$aiStatus.dailyLimit} requests. Only the bubble text, its
+          neighbours, the title and (if chosen) the panel image are sent to the provider.
         {/if}
       </Helper>
     </div>
