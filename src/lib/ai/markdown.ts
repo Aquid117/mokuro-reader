@@ -1,6 +1,6 @@
 /**
  * Tiny, safe Markdown subset for AI follow-up answers: escapes HTML first, then renders **bold**,
- * *italic*, `code`, "- " / "1. " lists and paragraphs. No links or raw HTML.
+ * *italic*, `code`, "- " / "1. " lists, "> " quotes, "---" rules and paragraphs. No links or raw HTML.
  */
 function esc(t: string): string {
   return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -17,6 +17,11 @@ export function renderMarkdown(md: string): string {
   const out: string[] = [];
   let list: 'ul' | 'ol' | null = null;
   let para: string[] = [];
+  let quote: string[] = [];
+  const endQuote = () => {
+    if (quote.length) out.push(`<blockquote>${quote.map(inline).join('<br>')}</blockquote>`);
+    quote = [];
+  };
   const endPara = () => {
     if (para.length) out.push(`<p>${para.map(inline).join('<br>')}</p>`);
     para = [];
@@ -30,7 +35,19 @@ export function renderMarkdown(md: string): string {
     const ul = line.match(/^\s*[-*•]\s+(.*)$/);
     const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
     const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (ul || ol) {
+    const q = line.match(/^\s*>\s?(.*)$/);
+    if (q) {
+      endPara();
+      endList();
+      quote.push(q[1]);
+      continue;
+    }
+    endQuote();
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      endPara();
+      endList();
+      out.push('<hr>');
+    } else if (ul || ol) {
       endPara();
       const kind = ul ? 'ul' : 'ol';
       if (list !== kind) {
@@ -51,6 +68,7 @@ export function renderMarkdown(md: string): string {
       para.push(line);
     }
   }
+  endQuote();
   endPara();
   endList();
   return out.join('');

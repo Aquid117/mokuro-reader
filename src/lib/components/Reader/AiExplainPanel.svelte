@@ -301,6 +301,16 @@
     padding-left: 1.25rem;
     margin: 0 0 0.5rem;
   }
+  .ai-md :global(blockquote) {
+    border-left: 3px solid rgb(75 85 99);
+    padding-left: 0.6rem;
+    margin: 0 0 0.5rem;
+    color: rgb(209 213 219);
+  }
+  .ai-md :global(hr) {
+    border-color: rgb(55 65 81);
+    margin: 0.5rem 0;
+  }
   .ai-md :global(code) {
     background: rgb(55 65 81);
     border-radius: 0.25rem;

@@ -69,4 +69,10 @@ describe('renderMarkdown', () => {
       '<p><strong>て-form</strong> + しまう</p><ul><li>one</li><li>&lt;b&gt;two&lt;/b&gt;</li></ul><p>use <code>だ</code></p>'
     );
   });
+
+  it('renders quotes and rules', () => {
+    expect(renderMarkdown('> 任せてよ\n> “leave it”\n\n---\ntext')).toBe(
+      '<blockquote>任せてよ<br>“leave it”</blockquote><hr><p>text</p>'
+    );
+  });
 });
