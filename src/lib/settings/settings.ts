@@ -191,6 +191,14 @@ export const defaultAiSettings: AiSettings = {
   quality: 'fast'
 };
 
+/** Device storage (manga-immersion fork): remove finished volumes' pages after some days. */
+export type StorageSettings = {
+  autoRemoveFinished: boolean;
+  afterDays: number;
+};
+
+export const defaultStorageSettings: StorageSettings = { autoRemoveFinished: true, afterDays: 7 };
+
 export type Settings = {
   defaultFullscreen: boolean;
   textBoxBorders: boolean;
@@ -237,6 +245,7 @@ export type Settings = {
   catalogSettings: CatalogSettings;
   familiarity: FamiliaritySettings;
   ai: AiSettings;
+  storage: StorageSettings;
   /** manga-immersion fork (experimental, default off): open cloud volumes after the first pages, load the rest in the background */
   progressiveStreaming: boolean;
   lastUpdated?: string; // ISO 8601 timestamp for sync conflict resolution
@@ -466,6 +475,7 @@ const defaultSettings: Settings = {
   },
   familiarity: defaultFamiliaritySettings,
   ai: defaultAiSettings,
+  storage: defaultStorageSettings,
   progressiveStreaming: false
 };
 
@@ -528,6 +538,7 @@ export function migrateProfiles(profiles: Profiles): Profiles {
       mining: { ...defaultFamiliaritySettings.mining, ...(profile.familiarity?.mining || {}) }
     };
     migratedProfile.ai = { ...defaultAiSettings, ...(profile.ai || {}) };
+    migratedProfile.storage = { ...defaultStorageSettings, ...(profile.storage || {}) };
 
     // Validate singlePageView at top level: convert legacy boolean to 'auto', or use default for any invalid value
     const validPageViewModes = ['single', 'dual', 'auto'];

@@ -1,6 +1,6 @@
 {
-  "name": "Mokuro",
-  "short_name": "Mokuro",
+  "name": "Mokuro Manga",
+  "short_name": "Manga",
   "file_handlers": [
     {
       "action": "/",
@@ -67,5 +67,6 @@
   "display": "fullscreen",
   "scope": "/",
   "theme_color": "#030712",
-  "description": "Reader for Mokuro processed manga"
+  "description": "Japanese manga reader with Jiten highlighting, Anki mining and AI explanations",
+  "id": "/"
 }

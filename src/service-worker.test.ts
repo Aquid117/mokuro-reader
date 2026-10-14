@@ -55,6 +55,11 @@ describe('service worker fetch interception', () => {
     expect(respondWith).toHaveBeenCalledTimes(1);
   });
 
+  it('never intercepts the learning backend (/api), so it is not cached and login redirects pass', () => {
+    expect(dispatch(`${self.location.origin}/api/ai/history`)).not.toHaveBeenCalled();
+    expect(dispatch(`${self.location.origin}/api/login`)).not.toHaveBeenCalled();
+  });
+
   it('handles same-origin navigation requests', () => {
     const respondWith = dispatch(`${self.location.origin}/`);
     expect(respondWith).toHaveBeenCalledTimes(1);

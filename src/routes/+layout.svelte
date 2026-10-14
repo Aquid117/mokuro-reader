@@ -16,6 +16,8 @@
   import AnkiFieldModal from '$lib/components/Reader/AnkiFieldModal.svelte';
   import MinePreview from '$lib/components/Reader/MinePreview.svelte';
   import AiExplainPanel from '$lib/components/Reader/AiExplainPanel.svelte';
+  import SessionBanner from '$lib/components/SessionBanner.svelte';
+  import { startSessionWatch } from '$lib/immersion/session';
   import ImportPreparingModal from '$lib/components/ImportPreparingModal.svelte';
   import ProgressTracker from '$lib/components/ProgressTracker.svelte';
   import NightModeFilter from '$lib/components/NightModeFilter.svelte';
@@ -114,6 +116,14 @@
       // only while a volume of interest is pending. After the providers, so
       // the connected server is known and can authenticate.
       .finally(() => {
+        // manga-immersion fork: connect to the server's Bunko without typed credentials, and free
+        // device storage from finished volumes once the server listing is known
+        void import('$lib/immersion/bunko-autoconnect')
+          .then((m) => m.startBunkoAutoConnect())
+          .catch((error) => console.debug('[bunko-autoconnect] start skipped:', error));
+        void import('$lib/immersion/storage-cleanup')
+          .then((m) => m.startStorageCleanup())
+          .catch((error) => console.debug('[storage-cleanup] start skipped:', error));
         void import('$lib/catalog/server-ocr-queue')
           .then((m) => m.startServerOcrQueue())
           .catch((error) => console.debug('[OCR queue] start skipped:', error));
@@ -133,6 +143,9 @@
 
     // Initialize service worker update detection
     initSwUpdateDetection();
+
+    // manga-immersion fork: notice an expired Authelia login (PWA has no reload button)
+    startSessionWatch();
   });
 </script>
 
@@ -162,6 +175,7 @@
     <AnkiFieldModal />
     <MinePreview />
     <AiExplainPanel />
+    <SessionBanner />
     <ImportPreparingModal />
     <ProgressTracker />
     <NightModeFilter />

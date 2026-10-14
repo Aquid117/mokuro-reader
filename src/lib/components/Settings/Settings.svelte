@@ -7,6 +7,7 @@
   import { currentView } from '$lib/util/hash-router';
   import AnkiConnectSettings from './AnkiConnectSettings.svelte';
   import FamiliaritySettings from './FamiliaritySettings.svelte';
+  import DeviceStorageSettings from './DeviceStorageSettings.svelte';
   import ReaderSettings from './Reader/ReaderSettings.svelte';
   import Profiles from './Profiles/Profiles.svelte';
   import CatalogSettings from './CatalogSettings.svelte';
@@ -95,6 +96,7 @@
       <Profiles {onClose} />
       <AnkiConnectSettings />
       <FamiliaritySettings />
+      <DeviceStorageSettings />
       <CatalogSettings />
       <MetadataSettings />
       <AppearanceSettings />

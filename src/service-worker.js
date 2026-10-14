@@ -66,6 +66,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // manga-immersion fork: the learning backend (/api) is dynamic, per user and behind Authelia: never
+  // cache it, and let login redirects (/api/login) reach the browser untouched.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   async function respond() {
     const cache = await caches.open(CACHE);
 
