@@ -24,6 +24,7 @@ export type View =
   | { type: 'import' }
   | { type: 'ai-history' }
   | { type: 'words' }
+  | { type: 'study'; seriesId: string; volumeId: string }
   | { type: 'reading-speed' }
   | { type: 'merge-series' }
   | { type: 'progress-tracker' }
@@ -56,6 +57,13 @@ export function parseHash(hash: string): View {
     if (segments[0] === 'import') return { type: 'import' };
     if (segments[0] === 'ai-history') return { type: 'ai-history' };
     if (segments[0] === 'words') return { type: 'words' };
+    if (segments[0] === 'study' && segments.length >= 3) {
+      return {
+        type: 'study',
+        seriesId: decodeURIComponent(segments[1]),
+        volumeId: decodeURIComponent(segments[2])
+      };
+    }
     if (segments[0] === 'reading-speed') return { type: 'reading-speed' };
     if (segments[0] === 'merge-series') return { type: 'merge-series' };
     if (segments[0] === 'progress-tracker') return { type: 'progress-tracker' };
@@ -108,6 +116,8 @@ export function viewToHash(view: View): string {
       return '#/ai-history';
     case 'words':
       return '#/words';
+    case 'study':
+      return `#/study/${encodeURIComponent(view.seriesId)}/${encodeURIComponent(view.volumeId)}`;
     case 'upload':
       return '#/upload';
     case 'reading-speed':
@@ -167,6 +177,10 @@ export const nav = {
   toSeriesText: (seriesId: string, options?: NavigateOptions) =>
     navigate({ type: 'series-text', seriesId }, options),
 
+  /** Navigate to a volume's pre-study page (manga-immersion fork) */
+  toStudy: (seriesTitle: string, volumeTitle: string, options?: NavigateOptions) =>
+    navigate({ type: 'study', seriesId: seriesTitle, volumeId: volumeTitle }, options),
+
   /** Navigate to cloud page */
   toCloud: (options?: NavigateOptions) => navigate({ type: 'cloud' }, options),
 
@@ -214,6 +228,7 @@ export function navigateBack(): void {
       nav.toReader(view.seriesId, view.volumeId);
       break;
     case 'series-text':
+    case 'study':
       nav.toSeries(view.seriesId);
       break;
     case 'series':

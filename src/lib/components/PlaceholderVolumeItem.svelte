@@ -19,6 +19,8 @@
   import { PROVIDER_SHORT_LABELS, PROVIDER_BADGE_COLORS } from '$lib/util/sync/provider-display';
   import PlaceholderThumbnail from './PlaceholderThumbnail.svelte';
   import DownloadBadge from './DownloadBadge.svelte';
+  import CoverageBadge from './CoverageBadge.svelte';
+  import { nav } from '$lib/util/hash-router';
 
   interface Props {
     volume: VolumeMetadata;
@@ -125,9 +127,17 @@
               In Cloud • {sizeDisplay}
             </p>
             <Badge color={badgeColor} class="text-xs">{providerName}</Badge>
+            <CoverageBadge series={volume.series_title} volume={volume.volume_title} />
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <Button
+            color="alternative"
+            onclick={(e: Event) => {
+              e.stopPropagation();
+              nav.toStudy(volume.series_title, volume.volume_title);
+            }}>Study</Button
+          >
           {#if isDownloading}
             <Button color="light" disabled={true}>
               <Spinner size="4" class="me-2" />
@@ -167,6 +177,7 @@
     >
       <Badge color={badgeColor} class="text-xs">{providerName}</Badge>
       <span data-testid="archive-size">{sizeDisplay}</span>
+      <CoverageBadge series={volume.series_title} volume={volume.volume_title} link />
     </div>
   </button>
 {/if}

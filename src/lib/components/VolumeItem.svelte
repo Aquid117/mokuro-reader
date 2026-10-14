@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+  import CoverageBadge from './CoverageBadge.svelte';
   import { openCloudVolume } from '$lib/streaming/progressive';
   import {
     deleteVolume as deleteVolumeStats,
@@ -37,7 +38,8 @@
     ImageOutline,
     ExclamationCircleOutline,
     EditOutline,
-    DownloadSolid
+    DownloadSolid,
+    BookOpenOutline
   } from 'flowbite-svelte-icons';
   import { promptVolumeEditor } from '$lib/util/modals';
   import { db } from '$lib/catalog/db';
@@ -602,6 +604,13 @@
     if (seriesId) nav.toVolumeText(seriesId, volume_uuid);
   }
 
+  // manga-immersion fork: pre-study page (works for cloud-only volumes too: the server has the text)
+  function onStudyClicked(e?: Event) {
+    e?.stopPropagation();
+    e?.preventDefault();
+    nav.toStudy(volume.series_title, volume.volume_title);
+  }
+
   function onEditClicked(e?: Event) {
     e?.stopPropagation();
     promptVolumeEditor(volume_uuid);
@@ -823,6 +832,7 @@
               {#if isNotInstalled}
                 <Badge color="gray" class="text-xs">Not on this device</Badge>
               {/if}
+              <CoverageBadge series={volume.series_title} volume={volume.volume_title} link />
             </div>
             <div class="flex flex-wrap items-center gap-x-3">
               <p>{progressDisplay}</p>
@@ -890,6 +900,14 @@
                 <EditOutline class="z-10 text-gray-400 hover:text-gray-300" />
               </button>
             {/if}
+            <!-- manga-immersion fork: pre-study word list -->
+            <button
+              onclick={onStudyClicked}
+              class="flex items-center justify-center"
+              title="Study: words you don't know yet"
+            >
+              <BookOpenOutline class="z-10 text-purple-400 hover:text-purple-300" />
+            </button>
             <button
               onclick={onDeleteClicked}
               class="flex items-center justify-center"
@@ -944,6 +962,13 @@
         placement="bottom-end"
         bind:isOpen={menuOpen}
       >
+        <DropdownItem
+          onclick={onStudyClicked}
+          class="flex w-full items-center text-gray-700 dark:text-gray-200"
+        >
+          <BookOpenOutline class="me-2 h-5 w-5 flex-shrink-0" />
+          <span class="flex-1 text-left">Study words</span>
+        </DropdownItem>
         {#if isNotInstalled}
           {#if downloadFileId}
             <DropdownItem
@@ -1131,6 +1156,7 @@
               {/key}
             </Badge>
           {/if}
+          <CoverageBadge series={volume.series_title} volume={volume.volume_title} link />
         </div>
         <div
           class="flex flex-wrap items-center gap-x-2 text-xs sm:w-[250px]"

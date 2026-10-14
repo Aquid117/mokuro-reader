@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loadSeriesStudy } from '$lib/study/api';
   import { catalog, currentSeries } from '$lib/catalog';
   import VolumeItem from '$lib/components/VolumeItem.svelte';
   import PlaceholderVolumeItem from '$lib/components/PlaceholderVolumeItem.svelte';
@@ -260,6 +261,15 @@
   // Raw folder title (identity) and its human-facing overlay. The overlay is
   // presentation only: rename/cloud/delete flows below keep using seriesTitle.
   let seriesTitle = $derived(manga[0]?.series_title || placeholders[0]?.series_title || '');
+
+  // manga-immersion fork: per-volume coverage badges (server analysis, polled while pending)
+  let studyLoadedFor = '';
+  $effect(() => {
+    if (seriesTitle && seriesTitle !== studyLoadedFor) {
+      studyLoadedFor = seriesTitle;
+      void loadSeriesStudy(seriesTitle);
+    }
+  });
   let seriesDisplayTitle = $derived(
     seriesTitle
       ? resolveDisplayTitle(

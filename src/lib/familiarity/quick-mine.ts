@@ -26,6 +26,8 @@ export interface QuickMineInput {
   pageNumber: number;
   seriesTitle?: string;
   volumeTitle?: string;
+  /** link stored in SourceURL (default: the current page) */
+  sourceUrl?: string;
 }
 
 const KANJI = '\\u3400-\\u9fff\\uf900-\\ufaff々〆ヶ';
@@ -114,7 +116,10 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
   busy = true;
   try {
     if (input.vocab) setMiningWord(input.token, input.vocab, input.surface);
-    const fields = buildMangaFields(input, location.origin + location.pathname + location.hash);
+    const fields = buildMangaFields(
+      input,
+      input.sourceUrl ?? location.origin + location.pathname + location.hash
+    );
     const note: Record<string, unknown> = {
       deckName: mining.deck,
       modelName: mining.model,
