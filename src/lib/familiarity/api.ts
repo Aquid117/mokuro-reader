@@ -100,8 +100,18 @@ export const familiarityApi = {
       undefined,
       'GET'
     ),
-  recordMined: (wordId: number, readingIndex: number, noteId: number | null, bubbleText?: string) =>
-    post<{ ok: true }>('/api/vocab/mined', { wordId, readingIndex, noteId, bubbleText }),
+  recordMined: (
+    wordId: number,
+    readingIndex: number,
+    noteId: number | null,
+    bubbleText?: string,
+    word?: string
+  ) => post<{ ok: true }>('/api/vocab/mined', { wordId, readingIndex, noteId, bubbleText, word }),
+  /** cards mined from this speech bubble */
+  minedForBubble: (text: string) =>
+    post<{
+      mined: { wordId: number; readingIndex: number; noteId: number; word: string | null }[];
+    }>(`/api/vocab/mined${qs({ text })}`, undefined, 'GET'),
   status: () =>
     post<{ configured: boolean; parseCache: number; vocabStates: number; pausedForMs: number }>(
       '/api/jiten/status',

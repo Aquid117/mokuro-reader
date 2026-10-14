@@ -176,6 +176,16 @@
       >
         Preview the card image first (adjust, then add)
       </Toggle>
+      <Toggle
+        checked={fam.mining.aiNotes !== false}
+        onchange={() =>
+          updateFamiliaritySetting('mining', {
+            ...fam.mining,
+            aiNotes: fam.mining.aiNotes === false
+          })}
+      >
+        Add the bubble's AI explanation to the card's Notes (if it was explained)
+      </Toggle>
       <label class="flex items-center justify-between gap-2 text-sm">
         Deck
         <input

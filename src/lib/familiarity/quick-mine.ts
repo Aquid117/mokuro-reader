@@ -4,6 +4,8 @@ import { ankiConnect } from '$lib/anki-connect';
 import { showSnackbar } from '$lib/util';
 import { bubbleInBitmap, cropRect, encodeCrop, type CropMode, type Rect } from './panel-crop';
 import { requestMinePreview } from './mine-preview';
+import { aiApi } from '$lib/ai/api';
+import { buildAiNotes } from '$lib/ai/anki-notes';
 import { onNoteAdded, setMiningWord, readingToKana } from './mining-context';
 import { ankiSync, refreshAnkiSync } from './anki-sync';
 import type { ParsedToken, VocabEntry } from './types';
@@ -154,6 +156,14 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
         if (imageUrl) URL.revokeObjectURL(imageUrl);
       }
     }
+    // AI explanation of this bubble (if one was requested before) goes into Notes
+    if (mining.aiNotes !== false) {
+      const ai = await Promise.race([
+        aiApi.forBubble(input.blockText).catch(() => null),
+        new Promise<null>((r) => setTimeout(() => r(null), 2000))
+      ]);
+      if (ai?.result) fields.Notes = buildAiNotes(ai.result.explanation);
+    }
     const result = await ankiConnect('addNote', { note }, { silent: true });
     if (typeof result === 'number') {
       // status may not be loaded yet on the first card; the server default is 2 min
@@ -163,7 +173,7 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
         : '';
       showSnackbar(`Added ${fields.Word} to ${mining.deck}${when}`, 4000);
       void refreshAnkiSync();
-      void onNoteAdded(input.surface, result);
+      void onNoteAdded(input.surface, result, input.blockText);
       return true;
     }
     // ankiConnect swallows errors in silent mode; ask why via canAddNotesWithErrorDetail

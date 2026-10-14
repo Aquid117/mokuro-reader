@@ -3,6 +3,10 @@
   import { renderMarkdown } from '$lib/ai/markdown';
   import type { ExplanationData } from '$lib/ai/api';
   import { showSnackbar } from '$lib/util/snackbar';
+  import { familiarityApi } from '$lib/familiarity/api';
+  import { ankiConnect } from '$lib/anki-connect';
+  import { buildAiNotes, mergeAiNotes, hasAiNotes } from '$lib/ai/anki-notes';
+  import { settings } from '$lib/settings';
 
   // manga-immersion fork: AI explanation of one speech bubble (translation, breakdown, grammar)
   // with follow-up questions. Non-modal: side panel on wide screens, bottom sheet on narrow ones.
@@ -28,6 +32,68 @@
     return () => clearInterval(t);
   });
   let elapsed = $derived(Math.max(0, Math.round((now - p.startedAt) / 1000)));
+
+  // Cards mined from this bubble: offer to put the explanation into their Notes field
+  interface CardRow {
+    noteId: number;
+    word: string;
+    status: 'idle' | 'adding' | 'done' | 'has';
+  }
+  let cards = $state<CardRow[]>([]);
+  let cardsFor = '';
+  $effect(() => {
+    const text = p.ctx?.text ?? '';
+    const key = `${text}|${p.result?.id ?? ''}`;
+    if (!p.result || !text || key === cardsFor || !$settings.ankiConnectSettings.enabled) return;
+    cardsFor = key;
+    cards = [];
+    familiarityApi
+      .minedForBubble(text)
+      .then(async (res) => {
+        const rows: CardRow[] = res.mined.map((m) => ({
+          noteId: m.noteId,
+          word: m.word ?? '?',
+          status: 'idle'
+        }));
+        if (rows.length) {
+          const info = (await ankiConnect(
+            'notesInfo',
+            { notes: rows.map((r) => r.noteId) },
+            { silent: true }
+          )) as { noteId: number; fields?: Record<string, { value: string }> }[] | undefined;
+          for (const r of rows) {
+            const n = info?.find((x) => x?.noteId === r.noteId);
+            if (!n?.fields)
+              r.status = 'done'; // deleted in Anki: nothing to update
+            else if (hasAiNotes(n.fields.Notes?.value ?? '')) r.status = 'has';
+          }
+        }
+        if (cardsFor === key) cards = rows.filter((r) => r.status !== 'done');
+      })
+      .catch(() => {});
+  });
+
+  async function addToCard(row: CardRow) {
+    if (!ex) return;
+    row.status = 'adding';
+    try {
+      const info = (await ankiConnect('notesInfo', { notes: [row.noteId] }, { silent: true })) as
+        | { fields?: Record<string, { value: string }> }[]
+        | undefined;
+      const existing = info?.[0]?.fields?.Notes?.value ?? '';
+      const merged = mergeAiNotes(existing, buildAiNotes(ex));
+      await ankiConnect(
+        'updateNoteFields',
+        { note: { id: row.noteId, fields: { Notes: merged } } },
+        { silent: true }
+      );
+      row.status = 'has';
+      showSnackbar(`Explanation added to the card for ${row.word}`);
+    } catch (e) {
+      row.status = 'idle';
+      showSnackbar(`Could not update the card: ${(e as Error).message}`);
+    }
+  }
 
   function sentenceParts(text: string, focus?: string): { t: string; focus: boolean }[] {
     if (!focus || !text.includes(focus)) return [{ t: text, focus: false }];
@@ -145,6 +211,29 @@
         >
       {/if}
     </div>
+
+    {#if cards.length && ex}
+      <div
+        class="flex flex-wrap items-center gap-1.5 border-b border-gray-800 px-4 py-2 text-xs text-gray-300"
+      >
+        <span>Your cards from this bubble:</span>
+        {#each cards as c (c.noteId)}
+          <button
+            class="rounded px-2 py-1 disabled:opacity-60 {c.status === 'has'
+              ? 'bg-green-800 text-white'
+              : 'bg-gray-700 hover:bg-gray-600'}"
+            disabled={c.status === 'adding'}
+            onclick={() => addToCard(c)}
+            title="Put translation and grammar into the card's Notes field"
+            >{c.status === 'has'
+              ? `✓ ${c.word} (update)`
+              : c.status === 'adding'
+                ? `Adding to ${c.word}…`
+                : `Add to card: ${c.word}`}</button
+          >
+        {/each}
+      </div>
+    {/if}
 
     <div bind:this={scroller} class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3 text-sm">
       {#if p.loading}

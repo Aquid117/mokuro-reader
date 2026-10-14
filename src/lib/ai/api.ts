@@ -125,7 +125,13 @@ export const aiApi = {
       `/api/ai/history${qs ? `?${qs}` : ''}`
     );
   },
-  forget: (id: string) => request<{ ok: boolean }>('DELETE', `/api/ai/history/${id}`)
+  forget: (id: string) => request<{ ok: boolean }>('DELETE', `/api/ai/history/${id}`),
+  /** latest explanation of exactly this bubble text (null if never explained) */
+  forBubble: (text: string) =>
+    request<{ result: { id: string; explanation: ExplanationData } | null }>(
+      'GET',
+      `/api/ai/for-bubble?text=${encodeURIComponent(text)}`
+    )
 };
 
 export interface SseEvent {

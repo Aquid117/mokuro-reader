@@ -170,6 +170,8 @@ export type FamiliaritySettings = {
     image: 'panel' | 'bubble' | 'page';
     /** show the cropped image first, adjustable, and add the card on confirm */
     preview: boolean;
+    /** put the bubble's AI explanation (if any) into the card's Notes */
+    aiNotes: boolean;
   };
 };
 
@@ -282,7 +284,8 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
     deck: 'Manga Mining',
     model: 'Manga Mining',
     image: 'panel',
-    preview: true
+    preview: true,
+    aiNotes: true
   }
 };
 

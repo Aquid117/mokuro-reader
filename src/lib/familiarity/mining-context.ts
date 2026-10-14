@@ -82,11 +82,22 @@ export function applyJitenTemplateVars(template: string, text?: string): string 
 }
 
 /** After a card was created: remember the word as mined (underline) on the server. */
-export async function onNoteAdded(text: string | undefined, noteId: number | null): Promise<void> {
+export async function onNoteAdded(
+  text: string | undefined,
+  noteId: number | null,
+  bubbleText?: string
+): Promise<void> {
   const m = lookup(text);
   if (!m) return;
   try {
-    await familiarityApi.recordMined(m.token.w, m.token.r, noteId);
+    // the bubble text lets the AI panel offer "add the explanation to this card" later
+    await familiarityApi.recordMined(
+      m.token.w,
+      m.token.r,
+      noteId,
+      bubbleText,
+      m.entry?.spelling || text
+    );
     invalidate();
   } catch {
     // non-fatal: the card exists; the underline will appear after the next refresh
