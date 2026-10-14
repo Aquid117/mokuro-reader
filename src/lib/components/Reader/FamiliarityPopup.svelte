@@ -4,7 +4,8 @@
     popupWord,
     installTapHandler,
     invalidate,
-    vocab as vocabMap
+    vocab as vocabMap,
+    getFamiliaritySeries
   } from '$lib/familiarity/engine';
   import { familiarityApi } from '$lib/familiarity/api';
   import { setMiningWord, readingToKana } from '$lib/familiarity/mining-context';
@@ -38,6 +39,7 @@
   function knownReason(v: VocabEntry | undefined): string {
     if (!v) return '';
     if (v.mined) return 'You already mined this word from manga.';
+    if (v.override === 'known') return 'You marked this word as known.';
     const states = v.jiten.filter((st) => st in KNOWN_STATES).map((st) => KNOWN_STATES[st]);
     return states.length ? `Already in your cards (Jiten: ${states.join(', ')}).` : '';
   }
@@ -82,16 +84,73 @@
     popupWord.set(null);
   }
 
-  async function override(state: OverrideState | null) {
+  function wordInfo(v: VocabEntry | undefined, text: string) {
+    return {
+      spelling: v?.spelling || text,
+      reading: v ? readingToKana(v.reading) : undefined,
+      meaning: v?.meanings?.[0]?.slice(0, 3).join('; ')
+    };
+  }
+
+  /** Mark known (mirrored to Jiten) / learning (reader-only), or reset everything for this word. */
+  async function override(state: 'known' | 'learning' | null) {
     if (!word) return;
     busy = true;
+    const series = getFamiliaritySeries();
     try {
-      if (state) await familiarityApi.setOverride(word.token.w, word.token.r, state);
-      else await familiarityApi.clearOverride(word.token.w, word.token.r);
       const entry = vocabMap.get(vocabKey(word.token.w, word.token.r));
-      if (entry) entry.override = state;
+      if (state) {
+        await familiarityApi.setOverride(
+          word.token.w,
+          word.token.r,
+          state,
+          wordInfo(word.vocab, word.text)
+        );
+      } else {
+        if (entry?.override) await familiarityApi.clearOverride(word.token.w, word.token.r);
+        if (entry?.ignored && series)
+          await familiarityApi.unignoreInSeries(series, word.token.w, word.token.r);
+      }
+      if (entry) {
+        entry.override = state as OverrideState | null;
+        if (!state) entry.ignored = false;
+      }
       invalidate();
-      showSnackbar(state ? `Marked as ${state}` : 'Override removed');
+      showSnackbar(
+        state === 'known'
+          ? 'Marked as known (also in Jiten)'
+          : state === 'learning'
+            ? 'Marked as learning'
+            : 'Back to the Jiten state'
+      );
+      close();
+    } catch (e) {
+      showSnackbar(`Could not save: ${(e as Error).message}`);
+    } finally {
+      busy = false;
+    }
+  }
+
+  /** Per-series ignore (recurring names, sound effects): reader-only, never sent to Jiten. */
+  async function ignoreInSeries() {
+    if (!word) return;
+    const series = getFamiliaritySeries();
+    if (!series) {
+      showSnackbar('No series known for this page');
+      return;
+    }
+    busy = true;
+    try {
+      await familiarityApi.ignoreInSeries(
+        series,
+        word.token.w,
+        word.token.r,
+        wordInfo(word.vocab, word.text)
+      );
+      const entry = vocabMap.get(vocabKey(word.token.w, word.token.r));
+      if (entry) entry.ignored = true;
+      invalidate();
+      showSnackbar(`Ignored in ${series}`);
       close();
     } catch (e) {
       showSnackbar(`Could not save: ${(e as Error).message}`);
@@ -190,7 +249,9 @@
           >Jiten: {jitenStateNames(v.jiten) || 'unknown'}</span
         >
         {#if v.override}<span class="rounded bg-amber-700 px-1.5 py-0.5"
-            >override: {v.override}</span
+            >{v.override === 'known' ? 'marked known' : `marked ${v.override}`}</span
+          >{/if}
+        {#if v.ignored}<span class="rounded bg-gray-600 px-1.5 py-0.5">ignored in this series</span
           >{/if}
         {#if word.token.state}<span class="rounded bg-purple-800 px-1.5 py-0.5"
             >shown as {stateLabel[word.token.state]}</span
@@ -235,7 +296,9 @@
       <button
         class="rounded bg-gray-700 px-2 py-2 hover:bg-gray-600 disabled:opacity-50"
         disabled={busy}
-        onclick={() => override('ignore')}>Ignore</button
+        onclick={ignoreInSeries}
+        title="Hide in this series only (names, sound effects); not sent to Jiten"
+        >Ignore in series</button
       >
       {#if canExplain}
         <button
@@ -244,7 +307,7 @@
           onclick={explainSentence}>Explain sentence</button
         >
       {/if}
-      {#if v?.override}
+      {#if v?.override || v?.ignored}
         <button
           class="col-span-2 rounded bg-gray-800 px-2 py-2 text-gray-300 hover:bg-gray-700 disabled:opacity-50"
           disabled={busy}

@@ -28,7 +28,8 @@
   import {
     highlightPage,
     clearPage,
-    applySettings as applyFamiliaritySettings
+    applySettings as applyFamiliaritySettings,
+    setFamiliaritySeries
   } from '$lib/familiarity';
   import { quickMine } from '$lib/familiarity/quick-mine';
   import { contextFromPage } from '$lib/ai/context';
@@ -717,6 +718,7 @@
       return;
     }
     applyFamiliaritySettings(fam);
+    setFamiliaritySeries(volumeMetadata.seriesTitle); // the series' ignore list applies
     void highlightPage(familiarityPageKey, els);
     // The Jiten popup mines a word by selecting it and dispatching `jiten:mine` on its text box, which
     // runs the same capture flow as a double-tap (synthetic dblclick events do not reach Svelte's

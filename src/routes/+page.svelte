@@ -15,6 +15,7 @@
     upload: () => import('$lib/views/UploadView.svelte'),
     import: () => import('$lib/views/ImportView.svelte'),
     'ai-history': () => import('$lib/views/AiHistoryView.svelte'),
+    words: () => import('$lib/views/MarkedWordsView.svelte'),
     'reading-speed': () => import('$lib/views/ReadingSpeedView.svelte'),
     'merge-series': () => import('$lib/views/MergeSeriesView.svelte'),
     'progress-tracker': () => import('$lib/views/ProgressTrackerView.svelte'),

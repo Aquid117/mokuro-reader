@@ -34,16 +34,74 @@ async function post<T>(path: string, body: unknown, method = 'POST'): Promise<T>
   return (await res.json()) as T;
 }
 
+/** Word info stored with a mark so the "Marked words" page can list it. */
+export interface WordInfo {
+  spelling?: string;
+  reading?: string;
+  meaning?: string;
+}
+
+export interface MarkedWord {
+  wordId: number;
+  readingIndex: number;
+  state: OverrideState;
+  updatedAt: number;
+  spelling: string | null;
+  reading: string | null;
+  meaning: string | null;
+  jitenSync: 'pending' | 'ok' | 'error' | null;
+  jitenError: string | null;
+}
+
+export interface SeriesIgnore {
+  series: string;
+  wordId: number;
+  readingIndex: number;
+  spelling: string | null;
+  reading: string | null;
+  meaning: string | null;
+  createdAt: number;
+}
+
+function qs(params: Record<string, string | undefined>): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) p.set(k, v);
+  const s = p.toString();
+  return s ? `?${s}` : '';
+}
+
 export const familiarityApi = {
-  parse: (blocks: { key: string; text: string }[]) =>
-    post<ParseResponse>('/api/jiten/parse', { blocks }),
+  parse: (blocks: { key: string; text: string }[], series?: string) =>
+    post<ParseResponse>('/api/jiten/parse', { blocks, series }),
   refresh: () => post<{ refreshed: number }>('/api/jiten/refresh', {}),
-  setOverride: (w: number, r: number, state: OverrideState) =>
-    post<{ ok: true }>(`/api/vocab/override/${w}/${r}`, { state }, 'PUT'),
+  /** known is mirrored to Jiten ("Never forget"); learning stays in the reader */
+  setOverride: (w: number, r: number, state: 'known' | 'learning', info: WordInfo = {}) =>
+    post<{ ok: true }>(`/api/vocab/override/${w}/${r}`, { state, ...info }, 'PUT'),
   clearOverride: (w: number, r: number) =>
     post<{ ok: true }>(`/api/vocab/override/${w}/${r}`, undefined, 'DELETE'),
-  recordMined: (wordId: number, readingIndex: number, noteId: number | null) =>
-    post<{ ok: true }>('/api/vocab/mined', { wordId, readingIndex, noteId }),
+  listOverrides: (state?: OverrideState, q?: string) =>
+    post<{ overrides: MarkedWord[] }>(`/api/vocab/overrides${qs({ state, q })}`, undefined, 'GET'),
+  /** per-series ignore list (names, sound effects); never sent to Jiten */
+  ignoreInSeries: (series: string, w: number, r: number, info: WordInfo = {}) =>
+    post<{ ok: true }>(
+      '/api/vocab/series-ignores',
+      { series, wordId: w, readingIndex: r, ...info },
+      'PUT'
+    ),
+  unignoreInSeries: (series: string, w: number, r: number) =>
+    post<{ ok: boolean }>(
+      `/api/vocab/series-ignores/${w}/${r}${qs({ series })}`,
+      undefined,
+      'DELETE'
+    ),
+  listSeriesIgnores: (series?: string, q?: string) =>
+    post<{ ignores: SeriesIgnore[]; series: { series: string; n: number }[] }>(
+      `/api/vocab/series-ignores${qs({ series, q })}`,
+      undefined,
+      'GET'
+    ),
+  recordMined: (wordId: number, readingIndex: number, noteId: number | null, bubbleText?: string) =>
+    post<{ ok: true }>('/api/vocab/mined', { wordId, readingIndex, noteId, bubbleText }),
   status: () =>
     post<{ configured: boolean; parseCache: number; vocabStates: number; pausedForMs: number }>(
       '/api/jiten/status',

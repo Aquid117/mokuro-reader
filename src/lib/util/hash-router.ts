@@ -23,6 +23,7 @@ export type View =
   | { type: 'upload' }
   | { type: 'import' }
   | { type: 'ai-history' }
+  | { type: 'words' }
   | { type: 'reading-speed' }
   | { type: 'merge-series' }
   | { type: 'progress-tracker' }
@@ -54,6 +55,7 @@ export function parseHash(hash: string): View {
     if (segments[0] === 'upload') return { type: 'upload' };
     if (segments[0] === 'import') return { type: 'import' };
     if (segments[0] === 'ai-history') return { type: 'ai-history' };
+    if (segments[0] === 'words') return { type: 'words' };
     if (segments[0] === 'reading-speed') return { type: 'reading-speed' };
     if (segments[0] === 'merge-series') return { type: 'merge-series' };
     if (segments[0] === 'progress-tracker') return { type: 'progress-tracker' };
@@ -104,6 +106,8 @@ export function viewToHash(view: View): string {
       return '#/import';
     case 'ai-history':
       return '#/ai-history';
+    case 'words':
+      return '#/words';
     case 'upload':
       return '#/upload';
     case 'reading-speed':
@@ -224,6 +228,7 @@ export function navigateBack(): void {
     case 'cloud':
     case 'import':
     case 'ai-history':
+    case 'words':
     case 'reading-speed':
     case 'upload':
     case 'merge-series':

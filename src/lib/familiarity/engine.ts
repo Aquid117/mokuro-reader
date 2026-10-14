@@ -60,6 +60,18 @@ const tokenCache = new Map<string, ParsedToken[]>(); // block text → tokens
 export const vocab = new Map<string, VocabEntry>(); // "wordId:readingIndex" → entry
 const pages = new Map<string, PageEntry>();
 let currentSettings: FamiliaritySettings | null = null;
+/** series of the pages being highlighted: its ignore list applies (manga-immersion fork) */
+let currentSeries: string | undefined;
+
+export function setFamiliaritySeries(series: string | undefined): void {
+  if (series === currentSeries) return;
+  currentSeries = series;
+  tokenCache.clear(); // states differ per series (ignore lists)
+}
+
+export function getFamiliaritySeries(): string | undefined {
+  return currentSeries;
+}
 let pending: { key: string; text: string; resolve: (t: ParsedToken[]) => void }[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let generation = 0;
@@ -125,7 +137,7 @@ async function flush(): Promise<void> {
   const blocks = [...byText.keys()].map((text, i) => ({ key: `b${i}`, text }));
   familiarityBusy.set(true);
   try {
-    const res = await familiarityApi.parse(blocks);
+    const res = await familiarityApi.parse(blocks, currentSeries);
     for (const [k, v] of Object.entries(res.vocab)) vocab.set(k, v);
     blocks.forEach((blk, i) => {
       const tokens = res.blocks[i]?.tokens ?? [];

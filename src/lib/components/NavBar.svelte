@@ -8,7 +8,8 @@
     RefreshOutline,
     ChartLineUpOutline,
     CalendarMonthOutline,
-    LightbulbOutline
+    LightbulbOutline,
+    TagOutline
   } from 'flowbite-svelte-icons';
   import { nav, isOnReader } from '$lib/util/hash-router';
   import Settings from './Settings/Settings.svelte';
@@ -168,6 +169,15 @@
       </button>
       <button onclick={openSettings} class="flex h-6 w-6 items-center justify-center">
         <UserSettingsSolid class="h-6 w-6 cursor-pointer hover:text-primary-700" />
+      </button>
+      <!-- manga-immersion fork: words marked known / learning / ignored per series -->
+      <button
+        onclick={() => (window.location.hash = '#/words')}
+        class="flex h-6 w-6 items-center justify-center"
+        aria-label="Marked words"
+        title="Marked words"
+      >
+        <TagOutline class="h-6 w-6 cursor-pointer hover:text-primary-700" />
       </button>
       <!-- manga-immersion fork: history of AI explanations -->
       <button

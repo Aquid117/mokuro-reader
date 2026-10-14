@@ -21,6 +21,8 @@ export interface VocabEntry {
   pitch: number[];
   jiten: number[];
   override: OverrideState | null;
+  /** ignored in the current series (manga-immersion fork) */
+  ignored?: boolean;
   mined: boolean;
   conj?: string[];
 }

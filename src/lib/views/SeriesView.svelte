@@ -16,6 +16,7 @@
     TrashBinSolid,
     DownloadSolid,
     FileLinesOutline,
+    TagOutline,
     SortOutline,
     GridOutline,
     ListOutline,
@@ -760,6 +761,15 @@
         >
           <FileLinesOutline class="me-2 h-5 w-5 flex-shrink-0" />
           <span class="flex-1 text-left">View Series Text</span>
+        </DropdownItem>
+        <!-- manga-immersion fork: this series' ignore list (names, sound effects) -->
+        <DropdownItem
+          onclick={() =>
+            (window.location.hash = `#/words?series=${encodeURIComponent(seriesTitle)}`)}
+          class="flex w-full items-center text-gray-700 dark:text-gray-200"
+        >
+          <TagOutline class="me-2 h-5 w-5 flex-shrink-0" />
+          <span class="flex-1 text-left">Ignored words in this series</span>
         </DropdownItem>
       </Dropdown>
     </div>
