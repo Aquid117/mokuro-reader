@@ -112,6 +112,18 @@ export const familiarityApi = {
     post<{
       mined: { wordId: number; readingIndex: number; noteId: number; word: string | null }[];
     }>(`/api/vocab/mined${qs({ text })}`, undefined, 'GET'),
+  /** Jiten follows the reviews of selected Anki decks (manga-immersion fork) */
+  ankiImportStatus: () =>
+    post<{
+      decks: string[];
+      lastRunAt: number | null;
+      lastOkAt: number | null;
+      lastCards: number | null;
+      lastError: string | null;
+      running: boolean;
+    }>('/api/jiten/anki-import', undefined, 'GET'),
+  runAnkiImport: (full = false) =>
+    post<{ ok: boolean; cards?: number; error?: string }>('/api/jiten/anki-import', { full }),
   status: () =>
     post<{ configured: boolean; parseCache: number; vocabStates: number; pausedForMs: number }>(
       '/api/jiten/status',

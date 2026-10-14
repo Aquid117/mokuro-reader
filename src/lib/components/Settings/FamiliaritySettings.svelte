@@ -26,9 +26,30 @@
   let now = $state(Date.now());
   let ai = $derived($settings.ai ?? defaultAiSettings);
 
+  // Jiten follows Anki: status + manual run
+  type AnkiImport = Awaited<ReturnType<typeof familiarityApi.ankiImportStatus>>;
+  let ankiImport = $state<AnkiImport | null>(null);
+  let importing = $state(false);
+  async function loadAnkiImport() {
+    ankiImport = await familiarityApi.ankiImportStatus().catch(() => null);
+  }
+  async function runAnkiImport() {
+    importing = true;
+    try {
+      const r = await familiarityApi.runAnkiImport(false);
+      showSnackbar(r.ok ? `Jiten updated from Anki (${r.cards} cards)` : `Failed: ${r.error}`);
+    } catch (e) {
+      showSnackbar(`Failed: ${(e as Error).message}`);
+    } finally {
+      importing = false;
+      await loadAnkiImport();
+    }
+  }
+
   onMount(() => {
     void refreshAnkiSync();
     void refreshAiStatus();
+    void loadAnkiImport();
     const t = setInterval(() => {
       now = Date.now();
       void refreshAnkiSync();
@@ -243,6 +264,26 @@
         )} h. Then sync AnkiMobile/Anki on your devices to see them.
       </Helper>
     </div>
+
+    {#if ankiImport}
+      <div class="flex flex-col gap-1 rounded border border-gray-300 p-2 dark:border-gray-600">
+        <div class="flex items-center justify-between gap-2">
+          <Label>Jiten follows your Anki reviews</Label>
+          <Button size="xs" color="alternative" disabled={importing} onclick={runAnkiImport}>
+            {importing ? 'Updating…' : 'Update now'}
+          </Button>
+        </div>
+        <Helper>
+          Decks: {ankiImport.decks.join(', ')}. Runs after AnkiWeb syncs (weekly in full).
+          {#if ankiImport.lastOkAt}
+            Last update {new Date(ankiImport.lastOkAt).toLocaleString()}: {ankiImport.lastCards} cards.
+          {/if}
+          {#if ankiImport.lastError}<span class="text-red-500"
+              >Last attempt failed: {ankiImport.lastError}</span
+            >{/if}
+        </Helper>
+      </div>
+    {/if}
 
     <div class="flex flex-col gap-2 rounded border border-gray-300 p-2 dark:border-gray-600">
       <Label>AI help (explain a bubble)</Label>
