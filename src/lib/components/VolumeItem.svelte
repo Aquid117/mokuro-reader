@@ -9,6 +9,7 @@
 
 <script lang="ts">
   import CoverageBadge from './CoverageBadge.svelte';
+  import { deleteVolumeFromServer } from '$lib/library/server-trash';
   import { openCloudVolume } from '$lib/streaming/progressive';
   import {
     deleteVolume as deleteVolumeStats,
@@ -39,7 +40,8 @@
     ExclamationCircleOutline,
     EditOutline,
     DownloadSolid,
-    BookOpenOutline
+    BookOpenOutline,
+    ServerOutline
   } from 'flowbite-svelte-icons';
   import { promptVolumeEditor } from '$lib/util/modals';
   import { db } from '$lib/catalog/db';
@@ -611,6 +613,12 @@
     nav.toStudy(volume.series_title, volume.volume_title);
   }
 
+  function onServerDeleteClicked(e?: Event) {
+    e?.stopPropagation();
+    e?.preventDefault();
+    deleteVolumeFromServer(volume);
+  }
+
   function onEditClicked(e?: Event) {
     e?.stopPropagation();
     promptVolumeEditor(volume_uuid);
@@ -649,6 +657,11 @@
   });
 
   async function onCloudDeleteOnly() {
+    // manga-immersion fork: the server is our Bunko; deleting goes through its restorable trash
+    if (deletableCloudFile?.provider === 'webdav') {
+      deleteVolumeFromServer(volume);
+      return;
+    }
     const target = deletableCloudFile;
     if (!target || isReadOnlyMode) {
       showSnackbar('Volume is not backed up to cloud');
@@ -908,6 +921,15 @@
             >
               <BookOpenOutline class="z-10 text-purple-400 hover:text-purple-300" />
             </button>
+            {#if cloudFile && !isPlaceholderRow}
+              <button
+                onclick={onServerDeleteClicked}
+                class="flex items-center justify-center"
+                title="Delete from server (restorable trash)"
+              >
+                <ServerOutline class="z-10 text-red-400 hover:text-red-300" />
+              </button>
+            {/if}
             <button
               onclick={onDeleteClicked}
               class="flex items-center justify-center"
@@ -969,6 +991,15 @@
           <BookOpenOutline class="me-2 h-5 w-5 flex-shrink-0" />
           <span class="flex-1 text-left">Study words</span>
         </DropdownItem>
+        {#if cloudFile}
+          <DropdownItem
+            onclick={onServerDeleteClicked}
+            class="flex w-full items-center text-red-600 dark:text-red-400"
+          >
+            <ServerOutline class="me-2 h-5 w-5 flex-shrink-0" />
+            <span class="flex-1 text-left">Delete from server…</span>
+          </DropdownItem>
+        {/if}
         {#if isNotInstalled}
           {#if downloadFileId}
             <DropdownItem

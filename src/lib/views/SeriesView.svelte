@@ -1,5 +1,6 @@
 <script lang="ts">
   import { loadSeriesStudy } from '$lib/study/api';
+  import { deleteSeriesFromServer } from '$lib/library/server-trash';
   import { catalog, currentSeries } from '$lib/catalog';
   import VolumeItem from '$lib/components/VolumeItem.svelte';
   import PlaceholderVolumeItem from '$lib/components/PlaceholderVolumeItem.svelte';
@@ -18,6 +19,7 @@
     DownloadSolid,
     FileLinesOutline,
     TagOutline,
+    ServerOutline,
     SortOutline,
     GridOutline,
     ListOutline,
@@ -780,6 +782,14 @@
         >
           <TagOutline class="me-2 h-5 w-5 flex-shrink-0" />
           <span class="flex-1 text-left">Ignored words in this series</span>
+        </DropdownItem>
+        <!-- manga-immersion fork: remove the series from the Bunko library (restorable trash) -->
+        <DropdownItem
+          onclick={() => deleteSeriesFromServer(seriesTitle, () => nav.toCatalog())}
+          class="flex w-full items-center text-red-600 dark:text-red-400"
+        >
+          <ServerOutline class="me-2 h-5 w-5 flex-shrink-0" />
+          <span class="flex-1 text-left">Delete series from server…</span>
         </DropdownItem>
       </Dropdown>
     </div>

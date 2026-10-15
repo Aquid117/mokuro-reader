@@ -16,6 +16,7 @@
     import: () => import('$lib/views/ImportView.svelte'),
     'ai-history': () => import('$lib/views/AiHistoryView.svelte'),
     words: () => import('$lib/views/MarkedWordsView.svelte'),
+    trash: () => import('$lib/views/TrashView.svelte'),
     study: () => import('$lib/views/StudyView.svelte'),
     'reading-speed': () => import('$lib/views/ReadingSpeedView.svelte'),
     'merge-series': () => import('$lib/views/MergeSeriesView.svelte'),

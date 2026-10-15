@@ -20,6 +20,7 @@
   import PlaceholderThumbnail from './PlaceholderThumbnail.svelte';
   import DownloadBadge from './DownloadBadge.svelte';
   import CoverageBadge from './CoverageBadge.svelte';
+  import { deleteVolumeFromServer } from '$lib/library/server-trash';
   import { nav } from '$lib/util/hash-router';
 
   interface Props {
@@ -77,6 +78,11 @@
 
   async function onDeleteClicked(e: Event) {
     e.stopPropagation();
+    // manga-immersion fork: our Bunko deletes through its restorable server trash
+    if (cloudProvider === 'webdav') {
+      deleteVolumeFromServer(volume);
+      return;
+    }
 
     promptConfirmation(`Delete ${volName} from ${providerName}?`, async () => {
       try {

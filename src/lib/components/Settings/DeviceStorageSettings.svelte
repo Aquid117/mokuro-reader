@@ -125,5 +125,14 @@
         {busy ? 'Removing…' : 'Free space now'}
       </Button>
     </div>
+
+    <div
+      class="flex items-center justify-between gap-2 border-t border-gray-200 pt-3 text-sm dark:border-gray-700"
+    >
+      <span>Server trash: volumes and series deleted from Bunko, restorable for 30 days.</span>
+      <Button size="xs" color="alternative" onclick={() => (window.location.hash = '#/trash')}
+        >Open</Button
+      >
+    </div>
   </div>
 </AccordionItem>

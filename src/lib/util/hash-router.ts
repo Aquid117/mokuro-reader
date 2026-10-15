@@ -24,6 +24,7 @@ export type View =
   | { type: 'import' }
   | { type: 'ai-history' }
   | { type: 'words' }
+  | { type: 'trash' }
   | { type: 'study'; seriesId: string; volumeId: string }
   | { type: 'reading-speed' }
   | { type: 'merge-series' }
@@ -57,6 +58,7 @@ export function parseHash(hash: string): View {
     if (segments[0] === 'import') return { type: 'import' };
     if (segments[0] === 'ai-history') return { type: 'ai-history' };
     if (segments[0] === 'words') return { type: 'words' };
+    if (segments[0] === 'trash') return { type: 'trash' };
     if (segments[0] === 'study' && segments.length >= 3) {
       return {
         type: 'study',
@@ -116,6 +118,8 @@ export function viewToHash(view: View): string {
       return '#/ai-history';
     case 'words':
       return '#/words';
+    case 'trash':
+      return '#/trash';
     case 'study':
       return `#/study/${encodeURIComponent(view.seriesId)}/${encodeURIComponent(view.volumeId)}`;
     case 'upload':
@@ -244,6 +248,7 @@ export function navigateBack(): void {
     case 'import':
     case 'ai-history':
     case 'words':
+    case 'trash':
     case 'reading-speed':
     case 'upload':
     case 'merge-series':
