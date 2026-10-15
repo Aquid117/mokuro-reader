@@ -9,6 +9,7 @@ import {
 } from './offsets';
 import { vocabKey, type EffectiveState, type ParsedToken, type VocabEntry } from './types';
 import type { FamiliaritySettings } from '$lib/settings/settings';
+import { furiganaFor } from './furigana';
 
 /**
  * Familiarity highlighting engine.
@@ -50,7 +51,7 @@ export function highlightsSupported(): boolean {
 }
 
 interface PageEntry {
-  blocks: { el: HTMLElement; segments: TextSegment[]; text: string }[];
+  blocks: { el: HTMLElement; segments: TextSegment[]; text: string; tokens?: ParsedToken[] }[];
   ranges: Map<HighlightName, Range[]>;
   /** word identity for each range, for hit-testing (popup) */
   hits: { range: Range; token: ParsedToken }[];
@@ -107,6 +108,7 @@ export function applySettings(s: FamiliaritySettings): void {
     );
   }
   rebuildRegistry();
+  for (const entry of pages.values()) scheduleOverlays(entry); // tint / furigana settings may have changed
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -189,15 +191,113 @@ export async function highlightPage(pageKey: string, boxes: HTMLElement[]): Prom
         entry.ranges.set('jiten-mined', [...(entry.ranges.get('jiten-mined') ?? []), ...ranges]);
       for (const r of ranges) entry.hits.push({ range: r, token: t });
     }
+    entry.blocks[i].tokens = results[i];
   }
   rebuildRegistry();
+  scheduleOverlays(entry);
+}
+
+/* ---- word overlay (manga-immersion fork) ------------------------------------------------------------
+ * Each text box has a sibling `.word-overlay` at the same position (TextBoxes.svelte). It receives
+ * - tints: coloured boxes behind words on the page image, so "tint background" works with the OCR text
+ *   hidden (the visible OCR box covers them; then the ::highlight background takes over), and
+ * - furigana: small kana beside kanji groups, shown by CSS only while the OCR text is visible.
+ * Kana are drawn via CSS content (no text nodes), so text extraction, selection, 10ten and mining
+ * see the OCR text exactly as before. Positions come from the laid-out (hidden) OCR text. */
+
+function overlayOf(el: HTMLElement): HTMLElement | null {
+  const n = el.nextElementSibling;
+  return n instanceof HTMLElement && n.classList.contains('word-overlay') ? n : null;
+}
+
+function furiganaWanted(state: EffectiveState, s: FamiliaritySettings): boolean {
+  const f = s.furigana;
+  if (!f?.enabled) return false;
+  if (f.scope === 'all') return true;
+  if (f.scope === 'new') return state === 'new';
+  return state !== null;
+}
+
+function rectsOf(segments: TextSegment[], start: number, end: number): DOMRect[] {
+  const out: DOMRect[] = [];
+  for (const r of slicesToRanges(sliceRange(segments, start, end)))
+    for (const rect of r.getClientRects()) if (rect.width > 0 && rect.height > 0) out.push(rect);
+  return out;
+}
+
+function renderOverlays(entry: PageEntry): void {
+  const s = currentSettings;
+  for (const b of entry.blocks) {
+    const layer = overlayOf(b.el);
+    if (!layer) continue;
+    layer.replaceChildren();
+    if (!s || !b.tokens?.length || (!s.background && !s.furigana?.enabled)) continue;
+    const box = b.el.getBoundingClientRect();
+    const scale = b.el.offsetWidth ? box.width / b.el.offsetWidth : 1;
+    if (!scale || !box.width) continue;
+    const vertical = getComputedStyle(b.el).writingMode.startsWith('vertical');
+    // overlay origin = text box border-box corner
+    const local = (r: DOMRect) => ({
+      x: (r.left - box.left) / scale,
+      y: (r.top - box.top) / scale,
+      w: r.width / scale,
+      h: r.height / scale
+    });
+    const frag = document.createDocumentFragment();
+    for (const t of b.tokens) {
+      const v = vocab.get(vocabKey(t.w, t.r));
+      if (v?.ignored) continue;
+      let name = stateToName(t.state);
+      if (s.minFrequencyRank > 0 && v && v.freq > 0 && v.freq < s.minFrequencyRank) name = null;
+      if (name && s.onlyUnknown && name !== 'jiten-new') name = null;
+      if (s.background && name) {
+        for (const r of rectsOf(b.segments, t.s, t.e)) {
+          const p = local(r);
+          const el = document.createElement('span');
+          el.className = 'jt';
+          el.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;background:var(--${name}-bg)`;
+          frag.appendChild(el);
+        }
+      }
+      if (v?.reading && furiganaWanted(t.state, s)) {
+        const surface = b.text.slice(t.s, t.e);
+        for (const part of furiganaFor(surface, v.reading)) {
+          const rects = rectsOf(b.segments, t.s + part.start, t.s + part.end);
+          if (!rects.length) continue;
+          const p = local(rects[0]);
+          const el = document.createElement('span');
+          el.className = vertical ? 'furi v' : 'furi';
+          el.dataset.rt = part.rt;
+          if (vertical) {
+            const fs = Math.max(7, p.w * 0.45);
+            el.style.cssText = `left:${p.x + p.w}px;top:${p.y}px;height:${p.h}px;font-size:${fs}px`;
+          } else {
+            const fs = Math.max(7, p.h * 0.45);
+            el.style.cssText = `left:${p.x}px;top:${p.y - fs * 1.1}px;width:${p.w}px;font-size:${fs}px`;
+          }
+          frag.appendChild(el);
+        }
+      }
+    }
+    layer.appendChild(frag);
+  }
+}
+
+/** After the OCR lines were positioned (positionPerLine runs on render), measure in the next frame. */
+function scheduleOverlays(entry: PageEntry): void {
+  if (typeof requestAnimationFrame === 'undefined') return;
+  requestAnimationFrame(() => renderOverlays(entry));
 }
 
 export function clearPage(pageKey: string): void {
+  const entry = pages.get(pageKey);
+  for (const b of entry?.blocks ?? []) overlayOf(b.el)?.replaceChildren();
   if (pages.delete(pageKey)) rebuildRegistry();
 }
 
 export function clearAll(): void {
+  for (const entry of pages.values())
+    for (const b of entry.blocks) overlayOf(b.el)?.replaceChildren();
   pages.clear();
   rebuildRegistry();
 }

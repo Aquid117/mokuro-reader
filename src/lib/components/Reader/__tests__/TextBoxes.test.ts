@@ -105,7 +105,14 @@ function withFontSize<T>(fontSize: string | number, run: () => T): T {
  * is markup a DOM text scanner or a stylesheet can see.
  */
 function markup(container: HTMLElement): string {
-  return container.innerHTML.replace(/<!--.*?-->/g, '').replace(/\s*svelte-[a-z0-9]+/g, '');
+  return (
+    container.innerHTML
+      .replace(/<!--.*?-->/g, '')
+      .replace(/\s*svelte-[a-z0-9]+/g, '')
+      // manga-immersion fork: the (empty) word overlay after each text box is not part of the
+      // upstream rendering these snapshots guard
+      .replace(/\s*<div class="word-overlay"[^>]*><\/div>/g, '')
+  );
 }
 
 describe('TextBoxes never renders contenteditable', () => {

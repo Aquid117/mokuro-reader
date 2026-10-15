@@ -160,6 +160,12 @@ export type FamiliaritySettings = {
   minFrequencyRank: number;
   /** tap a highlighted word to open the Jiten word popup (overrides, Add to Anki) */
   popup: boolean;
+  /** furigana next to kanji, shown together with the OCR text (manga-immersion fork) */
+  furigana: {
+    enabled: boolean;
+    /** new = only unknown words, learning = unknown + learning, all = every kanji word */
+    scope: 'new' | 'learning' | 'all';
+  };
   /** one-tap mining from the popup */
   mining: {
     /** create the card directly (true) or open the reader's card editor (false) */
@@ -279,6 +285,7 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
   showMined: true,
   minFrequencyRank: 0,
   popup: true,
+  furigana: { enabled: true, scope: 'learning' },
   mining: {
     oneTap: true,
     deck: 'Manga Mining',
@@ -538,7 +545,11 @@ export function migrateProfiles(profiles: Profiles): Profiles {
       ...defaultFamiliaritySettings,
       ...(profile.familiarity || {}),
       colors: { ...defaultFamiliaritySettings.colors, ...(profile.familiarity?.colors || {}) },
-      mining: { ...defaultFamiliaritySettings.mining, ...(profile.familiarity?.mining || {}) }
+      mining: { ...defaultFamiliaritySettings.mining, ...(profile.familiarity?.mining || {}) },
+      furigana: {
+        ...defaultFamiliaritySettings.furigana,
+        ...(profile.familiarity?.furigana || {})
+      }
     };
     migratedProfile.ai = { ...defaultAiSettings, ...(profile.ai || {}) };
     migratedProfile.storage = { ...defaultStorageSettings, ...(profile.storage || {}) };

@@ -885,6 +885,9 @@
       {/if}
     </p>
   </div>
+  <!-- manga-immersion fork: word tints (on the page image) and furigana (with the OCR text), filled by
+       the familiarity engine; must stay the text box's next sibling for the CSS below -->
+  <div class="word-overlay" aria-hidden="true" style:left style:top style:display></div>
 {/each}
 
 <style>
@@ -932,6 +935,45 @@
 
   .textBox:focus p,
   .textBox:hover p {
+    visibility: visible;
+  }
+
+  /* manga-immersion fork: word overlay (see familiarity/engine.ts renderOverlays) */
+  .word-overlay {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  /* tints sit under the text box: visible on the page image, covered by a shown OCR box */
+  .word-overlay :global(.jt) {
+    position: absolute;
+    z-index: 10;
+    border-radius: 2px;
+  }
+  /* furigana sit above the text box and only show together with its OCR text */
+  .word-overlay :global(.furi) {
+    position: absolute;
+    z-index: 12;
+    visibility: hidden;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 2px;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .word-overlay :global(.furi)::before {
+    content: attr(data-rt);
+  }
+  .word-overlay :global(.furi.v) {
+    writing-mode: vertical-rl;
+  }
+  .textBox:hover + .word-overlay :global(.furi),
+  .textBox:focus + .word-overlay :global(.furi),
+  .textBox.forceVisible + .word-overlay :global(.furi),
+  .textBox.alwaysVisible + .word-overlay :global(.furi) {
     visibility: visible;
   }
 

@@ -142,7 +142,7 @@
       checked={fam.background}
       onchange={() => updateFamiliaritySetting('background', !fam.background)}
     >
-      Tint the background behind words
+      Tint the background behind words (also on the page with the OCR text hidden)
     </Toggle>
     {#if fam.background}
       <div>
@@ -159,6 +159,35 @@
         />
       </div>
     {/if}
+    <div class="flex flex-col gap-2 rounded border border-gray-300 p-2 dark:border-gray-600">
+      <Toggle
+        checked={fam.furigana?.enabled ?? true}
+        onchange={() =>
+          updateFamiliaritySetting('furigana', {
+            ...(fam.furigana ?? defaultFamiliaritySettings.furigana),
+            enabled: !(fam.furigana?.enabled ?? true)
+          })}
+      >
+        Furigana (shown with the OCR text)
+      </Toggle>
+      <label class="flex items-center justify-between gap-2 text-sm">
+        For
+        <select
+          class="w-56 rounded border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700"
+          value={fam.furigana?.scope ?? 'learning'}
+          onchange={(e) =>
+            updateFamiliaritySetting('furigana', {
+              ...(fam.furigana ?? defaultFamiliaritySettings.furigana),
+              scope: (e.target as HTMLSelectElement).value as 'new' | 'learning' | 'all'
+            })}
+        >
+          <option value="new">Only new words</option>
+          <option value="learning">New + learning words</option>
+          <option value="all">All words with kanji</option>
+        </select>
+      </label>
+      <Helper>Quick on/off: the あ button in the ＋ menu. Ignored words (names) get none.</Helper>
+    </div>
     <div>
       <Label>Skip very common words (frequency rank better than)</Label>
       <input

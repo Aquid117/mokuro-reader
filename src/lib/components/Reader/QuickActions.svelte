@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toggleFullScreen } from '$lib/util/fullscreen';
   import { pagedZoom } from '$lib/reader/paged-zoom';
-  import { settings, volumes, updateSetting } from '$lib/settings';
+  import { settings, volumes, updateSetting, updateFamiliaritySetting } from '$lib/settings';
   import {
     ArrowLeftOutline,
     ArrowRightOutline,
@@ -152,6 +152,7 @@
   }
 
   let canExplain = $derived(aiAvailable($aiStatus, $settings.ai?.enabled));
+  let fam = $derived($settings.familiarity);
 
   function onExplain(src: File | undefined, page?: Page, pageNumber?: number) {
     if (src && page) {
@@ -250,6 +251,23 @@
               >
             {/if}
           </button>
+        {/if}
+        {#if $settings.familiarity?.enabled}
+          <!-- manga-immersion fork: furigana on/off (shown together with the OCR text) -->
+          <button
+            onclick={() =>
+              updateFamiliaritySetting('furigana', {
+                ...(fam.furigana ?? { scope: 'learning' }),
+                enabled: !(fam.furigana?.enabled ?? true)
+              })}
+            class="flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold shadow-lg focus:outline-none {(fam
+              .furigana?.enabled ?? true)
+              ? 'bg-primary-600 text-white hover:bg-primary-700'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}"
+            aria-label={(fam.furigana?.enabled ?? true) ? 'Hide furigana' : 'Show furigana'}
+            aria-pressed={fam.furigana?.enabled ?? true}
+            title="Furigana (shown with the OCR text)">あ</button
+          >
         {/if}
         <!-- manga-immersion fork: touch-friendly "always show OCR" toggle (keyboard: T) -->
         <button
