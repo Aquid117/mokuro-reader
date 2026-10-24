@@ -178,7 +178,7 @@ export type FamiliaritySettings = {
     preview: boolean;
     /** put the bubble's AI explanation (if any) into the card's Notes */
     aiNotes: boolean;
-    /** set once the "Manga Mining" → "4 Mining" deck move (2026-10-25) has been applied to this profile */
+    /** last deck move applied to this profile (1: → "4 Mining", 2: → "4 Mining::Manga Mining", 2026-10-25) */
     deckMigrated?: number;
   };
 };
@@ -290,7 +290,7 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
   furigana: { enabled: true, scope: 'learning' },
   mining: {
     oneTap: true,
-    deck: '4 Mining',
+    deck: '4 Mining::Manga Mining',
     model: 'Manga Mining',
     image: 'panel',
     preview: true,
@@ -340,7 +340,7 @@ export const DEFAULT_MODEL_CONFIGS: Record<string, Omit<ModelConfig, 'modelName'
   // manga-immersion fork: the note type created for manga mining (deploy/anki/note-type). Used by the
   // reader's own card editor / double-tap path; the popup's one-tap path fills it directly.
   'Manga Mining': {
-    deckName: '4 Mining',
+    deckName: '4 Mining::Manga Mining',
     tags: 'manga mokuro {series}',
     fieldMappings: [
       { fieldName: 'Word', template: '{selection}' },
@@ -606,17 +606,19 @@ export function migrateProfiles(profiles: Profiles): Profiles {
       tags: oldAnki.tags ?? defaultSettings.ankiConnectSettings.tags
     };
 
-    // manga-immersion: 2026-10-25 Sergej moved manga cards from the "Manga Mining" deck to "4 Mining" (the
-    // note type stays). Applied once per profile, so choosing "Manga Mining" again later is kept.
-    if (!profile.familiarity?.mining?.deckMigrated) {
-      const mining = { ...migratedProfile.familiarity.mining, deckMigrated: 1 };
-      if (mining.deck === 'Manga Mining') mining.deck = '4 Mining';
+    // manga-immersion: Sergej's manga cards moved (2026-10-25) from the "Manga Mining" deck to "4 Mining" and
+    // then into its subdeck "4 Mining::Manga Mining" (the note type stays). Applied once per profile, so a deck
+    // chosen later is kept.
+    if ((profile.familiarity?.mining?.deckMigrated ?? 0) < 2) {
+      const moved = (deck: string | undefined) => deck === 'Manga Mining' || deck === '4 Mining';
+      const mining = { ...migratedProfile.familiarity.mining, deckMigrated: 2 };
+      if (moved(mining.deck)) mining.deck = '4 Mining::Manga Mining';
       migratedProfile.familiarity = { ...migratedProfile.familiarity, mining };
       const editor = migratedProfile.ankiConnectSettings.createModelConfigs?.['Manga Mining'];
-      if (editor?.deckName === 'Manga Mining') {
+      if (editor && moved(editor.deckName)) {
         migratedProfile.ankiConnectSettings.createModelConfigs = {
           ...migratedProfile.ankiConnectSettings.createModelConfigs,
-          'Manga Mining': { ...editor, deckName: '4 Mining' }
+          'Manga Mining': { ...editor, deckName: '4 Mining::Manga Mining' }
         };
       }
     }

@@ -113,6 +113,8 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
     return false;
   }
   const mining = all.familiarity.mining;
+  // "4 Mining::Manga Mining" → "Manga Mining" in the preview button and the confirmation
+  const deckLabel = mining.deck.split('::').pop() || mining.deck;
   busy = true;
   try {
     if (input.vocab) setMiningWord(input.token, input.vocab, input.surface);
@@ -145,7 +147,7 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
             word: fields.Word,
             reading: fields.Reading,
             sentenceHtml: fields.Sentence,
-            deck: mining.deck
+            deck: deckLabel
           });
           if (!chosen) return false; // cancelled: no card
           rect = chosen;
@@ -176,7 +178,7 @@ export async function quickMine(input: QuickMineInput): Promise<boolean> {
       const when = auto.enabled
         ? ` · AnkiWeb sync in ~${Math.max(1, Math.round(auto.afterMiningSec / 60))} min`
         : '';
-      showSnackbar(`Added ${fields.Word} to ${mining.deck}${when}`, 4000);
+      showSnackbar(`Added ${fields.Word} to ${deckLabel}${when}`, 4000);
       void refreshAnkiSync();
       void onNoteAdded(input.surface, result, input.blockText);
       return true;

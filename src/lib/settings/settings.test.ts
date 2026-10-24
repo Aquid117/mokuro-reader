@@ -12,34 +12,38 @@ import {
 } from './settings';
 
 describe('mining deck migration (manga-immersion)', () => {
-  const editorConfig = { deckName: 'Manga Mining', fieldMappings: [] };
-  it('moves the old default deck to 4 Mining once, including the card editor config', () => {
+  const SUB = '4 Mining::Manga Mining';
+  it('moves the old default decks to the subdeck once, including the card editor config', () => {
     const out = migrateProfiles({
       Test: {
         familiarity: { mining: { deck: 'Manga Mining', model: 'Manga Mining' } },
-        ankiConnectSettings: { createModelConfigs: { 'Manga Mining': editorConfig } }
+        ankiConnectSettings: {
+          createModelConfigs: { 'Manga Mining': { deckName: 'Manga Mining', fieldMappings: [] } }
+        }
       } as any
     });
     expect(out.Test.familiarity.mining).toMatchObject({
-      deck: '4 Mining',
+      deck: SUB,
       model: 'Manga Mining',
-      deckMigrated: 1
+      deckMigrated: 2
     });
-    expect(out.Test.ankiConnectSettings.createModelConfigs['Manga Mining'].deckName).toBe(
-      '4 Mining'
-    );
+    expect(out.Test.ankiConnectSettings.createModelConfigs['Manga Mining'].deckName).toBe(SUB);
+    const step1 = migrateProfiles({
+      Test: { familiarity: { mining: { deck: '4 Mining', deckMigrated: 1 } } } as any
+    });
+    expect(step1.Test.familiarity.mining.deck).toBe(SUB);
   });
 
   it('keeps a deck chosen after the migration and any other custom deck', () => {
     const again = migrateProfiles({
-      Test: { familiarity: { mining: { deck: 'Manga Mining', deckMigrated: 1 } } } as any
+      Test: { familiarity: { mining: { deck: '4 Mining', deckMigrated: 2 } } } as any
     });
-    expect(again.Test.familiarity.mining.deck).toBe('Manga Mining');
+    expect(again.Test.familiarity.mining.deck).toBe('4 Mining');
     const custom = migrateProfiles({
       Test: { familiarity: { mining: { deck: 'Sentences' } } } as any
     });
     expect(custom.Test.familiarity.mining.deck).toBe('Sentences');
-    expect(migrateProfiles({ Test: {} as any }).Test.familiarity.mining.deck).toBe('4 Mining');
+    expect(migrateProfiles({ Test: {} as any }).Test.familiarity.mining.deck).toBe(SUB);
   });
 });
 
