@@ -11,6 +11,38 @@ import {
   updateScheduleSetting
 } from './settings';
 
+describe('mining deck migration (manga-immersion)', () => {
+  const editorConfig = { deckName: 'Manga Mining', fieldMappings: [] };
+  it('moves the old default deck to 4 Mining once, including the card editor config', () => {
+    const out = migrateProfiles({
+      Test: {
+        familiarity: { mining: { deck: 'Manga Mining', model: 'Manga Mining' } },
+        ankiConnectSettings: { createModelConfigs: { 'Manga Mining': editorConfig } }
+      } as any
+    });
+    expect(out.Test.familiarity.mining).toMatchObject({
+      deck: '4 Mining',
+      model: 'Manga Mining',
+      deckMigrated: 1
+    });
+    expect(out.Test.ankiConnectSettings.createModelConfigs['Manga Mining'].deckName).toBe(
+      '4 Mining'
+    );
+  });
+
+  it('keeps a deck chosen after the migration and any other custom deck', () => {
+    const again = migrateProfiles({
+      Test: { familiarity: { mining: { deck: 'Manga Mining', deckMigrated: 1 } } } as any
+    });
+    expect(again.Test.familiarity.mining.deck).toBe('Manga Mining');
+    const custom = migrateProfiles({
+      Test: { familiarity: { mining: { deck: 'Sentences' } } } as any
+    });
+    expect(custom.Test.familiarity.mining.deck).toBe('Sentences');
+    expect(migrateProfiles({ Test: {} as any }).Test.familiarity.mining.deck).toBe('4 Mining');
+  });
+});
+
 describe('theme migration', () => {
   it('defaults a profile with no theme to the Dark preset', () => {
     const out = migrateProfiles({ Test: { backgroundColor: '#030712' } as any });

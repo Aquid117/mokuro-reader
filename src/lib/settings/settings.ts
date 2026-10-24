@@ -178,6 +178,8 @@ export type FamiliaritySettings = {
     preview: boolean;
     /** put the bubble's AI explanation (if any) into the card's Notes */
     aiNotes: boolean;
+    /** set once the "Manga Mining" → "4 Mining" deck move (2026-10-25) has been applied to this profile */
+    deckMigrated?: number;
   };
 };
 
@@ -288,7 +290,7 @@ export const defaultFamiliaritySettings: FamiliaritySettings = {
   furigana: { enabled: true, scope: 'learning' },
   mining: {
     oneTap: true,
-    deck: 'Manga Mining',
+    deck: '4 Mining',
     model: 'Manga Mining',
     image: 'panel',
     preview: true,
@@ -338,7 +340,7 @@ export const DEFAULT_MODEL_CONFIGS: Record<string, Omit<ModelConfig, 'modelName'
   // manga-immersion fork: the note type created for manga mining (deploy/anki/note-type). Used by the
   // reader's own card editor / double-tap path; the popup's one-tap path fills it directly.
   'Manga Mining': {
-    deckName: 'Manga Mining',
+    deckName: '4 Mining',
     tags: 'manga mokuro {series}',
     fieldMappings: [
       { fieldName: 'Word', template: '{selection}' },
@@ -603,6 +605,21 @@ export function migrateProfiles(profiles: Profiles): Profiles {
       quickCapture: oldAnki.quickCapture ?? defaultSettings.ankiConnectSettings.quickCapture,
       tags: oldAnki.tags ?? defaultSettings.ankiConnectSettings.tags
     };
+
+    // manga-immersion: 2026-10-25 Sergej moved manga cards from the "Manga Mining" deck to "4 Mining" (the
+    // note type stays). Applied once per profile, so choosing "Manga Mining" again later is kept.
+    if (!profile.familiarity?.mining?.deckMigrated) {
+      const mining = { ...migratedProfile.familiarity.mining, deckMigrated: 1 };
+      if (mining.deck === 'Manga Mining') mining.deck = '4 Mining';
+      migratedProfile.familiarity = { ...migratedProfile.familiarity, mining };
+      const editor = migratedProfile.ankiConnectSettings.createModelConfigs?.['Manga Mining'];
+      if (editor?.deckName === 'Manga Mining') {
+        migratedProfile.ankiConnectSettings.createModelConfigs = {
+          ...migratedProfile.ankiConnectSettings.createModelConfigs,
+          'Manga Mining': { ...editor, deckName: '4 Mining' }
+        };
+      }
+    }
 
     migratedProfile.nightModeSchedule = {
       ...defaultSettings.nightModeSchedule,

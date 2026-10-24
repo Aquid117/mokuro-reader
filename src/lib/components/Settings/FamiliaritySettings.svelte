@@ -244,7 +244,7 @@
           onchange={(e) =>
             updateFamiliaritySetting('mining', {
               ...fam.mining,
-              deck: (e.target as HTMLInputElement).value.trim() || 'Manga Mining'
+              deck: (e.target as HTMLInputElement).value.trim() || '4 Mining'
             })}
         />
       </label>
